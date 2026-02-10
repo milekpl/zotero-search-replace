@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Search &amp; Replace</title>
+  <link rel="stylesheet" href="chrome://global/skin/global.css" />
+  <link rel="stylesheet" href="chrome://zotero/skin/zotero.css" />
+  <link rel="stylesheet" href="chrome://zotero/skin/overlay.css" />
+  <style>
+    html, body {
+      font-family: -moz-dialog, system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: #f5f5f5;
+      color: #333;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      color: #222;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding: 14px;
+      background: white;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      -moz-border-radius: 4px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-group label {
+      font-weight: 600;
+      font-size: 12px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 180px;
+      height: 32px;
+      padding: 0 32px 0 12px;
+      border: 1px solid #a0a0a0;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      background: white;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555' d='M3 5l3 4 3-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-color: white;
+    }
+
+    select:hover {
+      border-color: #777;
+    }
+
+    select:focus {
+      border-color: #cc2936;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(204, 41, 54, 0.2);
+    }
+
+    select option {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #fafafa;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-wrapper:hover {
+      background: #f0f0f0;
+    }
+
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #cc2936;
+    }
+
+    .checkbox-wrapper span {
+      font-size: 13px;
+      color: #333;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #a0a0a0;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      font-size: 14px;
+      background: white;
+    }
+
+    input[type="text"]:focus {
+      border-color: #cc2936;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(204, 41, 54, 0.2);
+    }
+
+    button {
+      height: 32px;
+      padding: 0 16px;
+      border: 1px solid #a0a0a0;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: #333;
+    }
+
+    button:hover {
+      background: linear-gradient(to bottom, #f0f0f0, #d8d8d8);
+      border-color: #777;
+    }
+
+    button:focus {
+      border-color: #cc2936;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(204, 41, 54, 0.2);
+    }
+
+    button.primary {
+      background: linear-gradient(to bottom, #cc2936, #b3242d);
+      color: white;
+      border-color: #991b26;
+    }
+
+    button.primary:hover {
+      background: linear-gradient(to bottom, #b3242d, #991b26);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .results-section {
+      background: white;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      -moz-border-radius: 4px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: linear-gradient(to bottom, #f8f8f8, #f0f0f0);
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .results-header span {
+      font-weight: 600;
+      font-size: 13px;
+      color: #444;
+    }
+
+    .results-list {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      margin: 2px 6px;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      cursor: pointer;
+      background: white;
+      border: 1px solid transparent;
+      transition: background-color 0.1s;
+    }
+
+    .result-item:hover {
+      background: #f0f4ff;
+      border-color: #d0d0ff;
+    }
+
+    .result-item.selected {
+      background: #e8ecff;
+      border-color: #c8b8e8;
+    }
+
+    .result-item .field {
+      min-width: 80px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .result-item .title {
+      flex: 1;
+      font-size: 13px;
+      color: #333;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-item .match {
+      padding: 2px 6px;
+      background: #fff3cd;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .error {
+      color: #cc2936;
+      font-size: 12px;
+      padding: 10px 14px;
+      background: #fef2f2;
+      border-top: 1px solid #fecaca;
+    }
+
+    .replace-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #d0d0d0;
+    }
+
+    .replace-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px 12px;
+      border: 1px solid #a0a0a0;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+      background: #fafafa;
+    }
+
+    textarea:focus {
+      border-color: #cc2936;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(204, 41, 54, 0.2);
+    }
+
+    .replace-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .patterns-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #d0d0d0;
+    }
+
+    details {
+      background: white;
+      border: 1px solid #d0d0d0;
+      border-radius: 4px;
+      -moz-border-radius: 4px;
+      overflow: hidden;
+    }
+
+    details[open] > summary {
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    summary {
+      padding: 10px 14px;
+      background: linear-gradient(to bottom, #f8f8f8, #f0f0f0);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      user-select: none;
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    summary::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 10px;
+      color: #666;
+      transition: transform 0.2s;
+    }
+
+    details[open] > summary::before {
+      transform: rotate(90deg);
+    }
+
+    summary:hover {
+      background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+    }
+
+    .patterns-list {
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .pattern-category {
+      margin: 8px 0;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+    }
+
+    .pattern-category > strong {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .pattern-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      margin: 4px 0;
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pattern-item:hover {
+      background: #f5f5ff;
+      border-color: #d0d0ff;
+    }
+
+    .pattern-item.selected {
+      background: #f0e8ff;
+      border-color: #c8b8e8;
+    }
+
+    .pattern-item .pattern-name {
+      font-weight: 500;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .pattern-item .pattern-desc {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Search &amp; Replace</h1>
+
+  <div class="control-row">
+    <div class="control-group">
+      <label for="search-field">Search In</label>
+      <select id="search-field">
+        <option value="all">All Fields</option>
+        <optgroup label="Core Fields">
+          <option value="title">Title</option>
+          <option value="abstractNote">Abstract</option>
+          <option value="date">Date</option>
+          <option value="dateModified">Date Modified</option>
+        </optgroup>
+        <optgroup label="Creators">
+          <option value="creator.lastName">Creator (Last Name)</option>
+          <option value="creator.firstName">Creator (First Name)</option>
+          <option value="creator.fullName">Creator (Full Name)</option>
+        </optgroup>
+        <optgroup label="Publication">
+          <option value="publicationTitle">Publication Title</option>
+          <option value="publisher">Publisher</option>
+          <option value="volume">Volume</option>
+          <option value="issue">Issue</option>
+          <option value="pages">Pages</option>
+        </optgroup>
+        <optgroup label="Identifiers">
+          <option value="DOI">DOI</option>
+          <option value="ISBN">ISBN</option>
+          <option value="ISSN">ISSN</option>
+          <option value="url">URL</option>
+        </optgroup>
+        <optgroup label="Other Fields">
+          <option value="tags">Tags</option>
+          <option value="callNumber">Call Number</option>
+          <option value="extra">Extra</option>
+          <option value="note">Note</option>
+          <option value="itemType">Item Type</option>
+        </optgroup>
+        <optgroup label="Collections & Search">
+          <option value="collection">Collection</option>
+          <option value="savedSearch">Saved Search</option>
+        </optgroup>
+        <optgroup label="Attachments">
+          <option value="attachmentContent">Attachment Content</option>
+          <option value="attachmentFileType">Attachment File Type</option>
+        </optgroup>
+        <optgroup label="Annotations">
+          <option value="annotationText">Annotation Text</option>
+          <option value="annotationComment">Annotation Comment</option>
+        </optgroup>
+        <optgroup label="Item-Type Specific">
+          <option value="thesisType">Thesis Type</option>
+          <option value="reportType">Report Type</option>
+          <option value="videoRecordingFormat">Video Recording Format</option>
+          <option value="audioFileType">Audio File Type</option>
+          <option value="audioRecordingFormat">Audio Recording Format</option>
+          <option value="letterType">Letter Type</option>
+          <option value="interviewMedium">Interview Medium</option>
+          <option value="manuscriptType">Manuscript Type</option>
+          <option value="presentationType">Presentation Type</option>
+          <option value="mapType">Map Type</option>
+          <option value="artworkMedium">Artwork Medium</option>
+          <option value="programmingLanguage">Programming Language</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="pattern-type">Pattern Type</label>
+      <select id="pattern-type">
+        <option value="regex">Regular Expression</option>
+        <option value="exact">Exact Match</option>
+        <option value="sql_like">SQL LIKE (%)</option>
+      </select>
+    </div>
+
+    <label class="checkbox-wrapper">
+      <input type="checkbox" id="case-sensitive">
+      <span>Case Sensitive</span>
+    </label>
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="search-input" placeholder="Enter search pattern...">
+    <button id="search-button">Search</button>
+  </div>
+
+  <div class="results-section">
+    <div class="results-header">
+      <span id="results-count">0 items found</span>
+      <div class="button-row">
+        <button id="select-all">Select All</button>
+        <button id="deselect-all">Deselect All</button>
+      </div>
+    </div>
+    <div class="results-list" id="results-list">
+      <!-- Results rendered here -->
+    </div>
+    <div id="search-error" class="error"></div>
+  </div>
+
+  <div class="replace-section">
+    <div class="replace-row">
+      <input type="text" id="replace-input" placeholder="Replacement text (use $1, $2 for capture groups)...">
+      <button id="preview-replace">Preview</button>
+    </div>
+    <textarea id="preview-output" readonly placeholder="Preview will appear here..."></textarea>
+    <div class="replace-actions">
+      <button id="apply-replace" disabled class="primary">Replace in Selected</button>
+      <button id="create-collection">Create Collection...</button>
+    </div>
+  </div>
+
+  <div class="patterns-section">
+    <details>
+      <summary>Preloaded Data Quality Patterns</summary>
+      <div class="patterns-list" id="patterns-list">
+        <!-- Patterns rendered here by category -->
+      </div>
+    </details>
+  </div>
+
+  <script>
+    // Inject Zotero from dialogArguments BEFORE loading bundled scripts
+    (function() {
+      var log = typeof window.Zotero !== 'undefined' && window.Zotero.debug
+        ? function(msg) { window.Zotero.debug('SearchReplace: ' + msg); }
+        : function(msg) { window.dump('[SearchReplace] ' + msg + '\n'); };
+
+      // Try to get Zotero from opener first (works in chrome dialogs)
+      var openerZotero = null;
+      if (window.opener) {
+        try {
+          if (window.opener.Zotero) {
+            openerZotero = window.opener.Zotero;
+            log('Found Zotero from window.opener');
+          }
+        } catch (e) {
+          log('Cannot access window.opener.Zotero: ' + e.message);
+        }
+      }
+
+      try {
+        // Try both window.arguments (Firefox) and dialogArguments (some contexts)
+        var args = null;
+        if (window.arguments && window.arguments[0]) {
+          args = window.arguments[0];
+          log('Found window.arguments[0]');
+        } else if (typeof dialogArguments !== 'undefined') {
+          args = dialogArguments;
+          log('Found dialogArguments');
+        }
+
+        if (args) {
+          log('args.Zotero = ' + typeof args.Zotero);
+          log('args.ZoteroSearchReplace = ' + typeof args.ZoteroSearchReplace);
+          if (args.Zotero && !window.Zotero) {
+            window.Zotero = args.Zotero;
+            log('Injected Zotero from arguments');
+          }
+          if (args.ZoteroSearchReplace && !window.ZoteroSearchReplace) {
+            window.ZoteroSearchReplace = args.ZoteroSearchReplace;
+            log('Injected ZoteroSearchReplace from arguments');
+          }
+        } else if (openerZotero && !window.Zotero) {
+          // Fallback: use Zotero from opener
+          window.Zotero = openerZotero;
+          log('Using Zotero from window.opener');
+        }
+
+        // If we still don't have Zotero, try to get it from opener
+        if (!window.Zotero && openerZotero) {
+          window.Zotero = openerZotero;
+          log('Fallback: set window.Zotero from opener');
+        }
+      } catch (e) {
+        log('Could not inject Zotero: ' + e.message);
+        log(e.stack);
+      }
+
+      log('Pre-load: window.Zotero = ' + (window.Zotero ? 'exists' : 'null'));
+      log('Pre-load: window.ZoteroSearchReplace = ' + (window.ZoteroSearchReplace ? 'exists' : 'null'));
+    })();
+  </script>
+  <script src="scripts/zotero-search-replace-bundled.js"></script>
+  <script src="scripts/dialog-controller.js"></script>
+</body>
+</html>

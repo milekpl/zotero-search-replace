@@ -1,0 +1,1210 @@
+Submit…
+
+Clear
+
+Submitted with Debug ID 📋
+
+1770628191994	addons.xpi	WARN	Force scan SCOPE_APPLICATION (app-builtin-addons location missing from XPIStates)
+
+[JavaScript Error: "Error: Failed to load resource://services-settings/remote-settings.sys.mjs"]
+
+While creating services from category 'profile-after-change', could not create service for entry 'RemotePermissionService', contract ID '@mozilla.org/remote-permission-service;1'
+
+[JavaScript Error: "Error: Failed to load resource://services-settings/remote-settings.sys.mjs" {file: "resource://gre/modules/EssentialDomainsRemoteSettings.sys.mjs" line: 41}]
+
+[JavaScript Error: "Error: Failed to load resource://services-settings/remote-settings.sys.mjs" {file: "resource://gre/modules/SimpleURIUnknownSchemesRemoteObserver.sys.mjs" line: 45}]
+
+[JavaScript Error: "TypeError: this.ownerGlobal.gBrowser.getTabForBrowser is not a function" {file: "chrome://global/content/elements/browser-custom-element.mjs" line: 932}]
+getTabBrowser@chrome://global/content/elements/browser-custom-element.mjs:932:54
+onPageHide@chrome://global/content/elements/browser-custom-element.mjs:958:27
+
+
+appName => Zotero, version => 8.0 (x64), os => Linux 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025, locale => en-US, extensions => Zotero Search & Replace (0.1.0, extension)
+
+(3)(+0000000): Using data directory /home/milek/Zotero
+
+(3)(+0000006): Looking for Firefox profile in /mnt/d/git/.mozilla/firefox
+
+(3)(+0000000): Getting contents of /mnt/d/git/.mozilla/firefox/profiles.ini
+
+(3)(+0000011): Asynchronously opening database 'zotero'
+
+(3)(+0000000): /home/milek/Zotero/zotero.sqlite
+
+(4)(+0000050): Registering notifier observer 'paneHeader_sS' for [item]
+
+(4)(+0000005): Registering notifier observer 'itemBox_7W' for
+[item,infobox,tab]
+
+(4)(+0000006): Registering notifier observer 'abstractBox_LF' for [item,tab]
+
+(4)(+0000000): Registering notifier observer 'attachmentsBox_2S' for [item]
+
+(4)(+0000001): Registering notifier observer 'notesBox_6L' for [item]
+
+(4)(+0000001): Registering notifier observer 'noteBox_TM' for [item]
+
+(4)(+0000014): Registering notifier observer 'tagsBox_oD' for [item-
+tag,setting] with priority 101
+
+(4)(+0000000): Registering notifier observer
+'librariesCollectionsBox_4b' for [item,collection]
+
+(4)(+0000001): Registering notifier observer 'relatedbox_bQ' for [item]
+
+(4)(+0000000): Registering notifier observer 'noteEditor_11' for [item,file]
+
+(4)(+0000000): Registering notifier observer 'attachmentbox_bV' for [item]
+
+(4)(+0000001): Registering notifier observer
+'attachmentAnnotationsBox_yt' for [item]
+
+(4)(+0000004): Registering notifier observer
+'librariesCollectionsBox_Yg' for [item,collection]
+
+(4)(+0000003): Registering notifier observer 'tagsBox_et' for [item-
+tag,setting] with priority 101
+
+(4)(+0000001): Registering notifier observer 'relatedbox_cX' for [item]
+
+(4)(+0000000): Registering notifier observer 'ItemDetails_8p' for
+[item,itempane,tab]
+
+(4)(+0000012): Registering notifier observer 'tagsBox_Hd' for [item-
+tag,setting] with priority 101
+
+(4)(+0000000): Registering notifier observer
+'librariesCollectionsBox_Gk' for [item,collection]
+
+(4)(+0000000): Registering notifier observer 'relatedbox_p1' for [item]
+
+(4)(+0000001): Registering notifier observer 'noteEditor_CH' for [item,file]
+
+(4)(+0000006): Registering notifier observer 'itemBox_vH' for
+[item,infobox,tab]
+
+(4)(+0000000): Registering notifier observer 'Zo' for [item]
+
+(4)(+0000004): Registering notifier observer 'nc' for [item]
+
+(4)(+0000004): Registering notifier observer 'contextPane_fV' for [item]
+
+(4)(+0000000): Registering notifier observer 'contextPane_lf' for [tab]
+with priority 20
+
+(4)(+0000001): PRAGMA main.locking_mode=EXCLUSIVE
+
+(4)(+0000005): PRAGMA page_size
+
+(4)(+0000004): PRAGMA cache_size=2000
+
+(4)(+0000006): PRAGMA foreign_keys=true
+
+(4)(+0000023): SELECT version FROM version WHERE schema='system'
+
+(3)(+0000001): Proxy not required for https://
+zoteroproxycheck.s3.amazonaws.com/test
+
+(4)(+0000000): SELECT version FROM version WHERE schema='userdata'
+
+(4)(+0000000): SELECT version FROM version WHERE schema='compatibility'
+
+(4)(+0000000): SELECT value FROM settings WHERE setting='db' AND
+key='integrityCheck'
+
+(3)(+0000001): HTTP GET resource://zotero/schema/global/schema.json
+
+(3)(+0000002): HTTP GET resource://zotero/schema/global/schema.json
+succeeded with 200
+
+(4)(+0000001): SELECT version FROM version WHERE schema='globalSchema'
+
+(3)(+0000000): Database is up to date with global schema version 41 --
+skipping update
+
+(3)(+0000000): HTTP GET resource://zotero/schema/userdata.sql
+
+(3)(+0000003): HTTP GET resource://zotero/schema/userdata.sql succeeded
+with 200
+
+(4)(+0000001): PRAGMA foreign_keys = false
+
+(3)(+0000000): HTTP GET resource://zotero/schema/userdata.sql
+
+(3)(+0000020): HTTP GET resource://zotero/schema/userdata.sql succeeded
+with 200
+
+(4)(+0000000): SELECT 1 FROM itemDataValues WHERE value=0 LIMIT 1
+
+(4)(+0000011): Beginning DB transaction upmUPxKL
+
+(3)(+0000001): HTTP GET resource://zotero/schema/system.sql
+
+(3)(+0000004): HTTP GET resource://zotero/schema/system.sql succeeded
+with 200
+
+(3)(+0000000): Updating custom tables
+
+(4)(+0000000): PRAGMA foreign_keys
+
+(4)(+0000000): SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND
+tbl_name=? ['customItemTypes']
+
+(4)(+0000001): DELETE FROM itemTypesCombined
+
+(4)(+0000001): DELETE FROM fieldsCombined
+
+(4)(+0000002): DELETE FROM itemTypeFieldsCombined
+
+(4)(+0000004): DELETE FROM baseFieldMappingsCombined
+
+(4)(+0000001): INSERT INTO itemTypesCombined SELECT itemTypeID,
+typeName, display, 0 AS custom FROM itemTypes UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, typeName, display, 1 AS custom
+FROM customItemTypes
+
+(4)(+0000001): INSERT INTO fieldsCombined SELECT fieldID, fieldName,
+NULL AS label, fieldFormatID, 0 AS custom FROM fields UNION SELECT
+customFieldID + 10000 AS fieldID, fieldName, label, NULL, 1 AS custom
+FROM customFields
+
+(4)(+0000000): INSERT INTO itemTypeFieldsCombined SELECT itemTypeID,
+fieldID, hide, orderIndex FROM itemTypeFields UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, COALESCE(fieldID, customFieldID
++ 10000) AS fieldID, hide, orderIndex FROM customItemTypeFields
+
+(4)(+0000001): INSERT INTO baseFieldMappingsCombined SELECT itemTypeID,
+baseFieldID, fieldID FROM baseFieldMappings UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, baseFieldID, customFieldID +
+10000 AS fieldID FROM customBaseFieldMappings
+
+(3)(+0000000): HTTP GET resource://zotero/schema/userdata.sql
+
+(3)(+0000014): HTTP GET resource://zotero/schema/userdata.sql succeeded
+with 200
+
+(4)(+0000000): SELECT version FROM version WHERE schema='triggers'
+
+(3)(+0000000): HTTP GET resource://zotero/schema/triggers.sql
+
+(3)(+0000003): HTTP GET resource://zotero/schema/triggers.sql succeeded
+with 200
+
+(3)(+0000000): Updating custom tables
+
+(4)(+0000000): PRAGMA foreign_keys
+
+(4)(+0000000): DELETE FROM itemTypesCombined
+
+(4)(+0000000): DELETE FROM fieldsCombined
+
+(4)(+0000000): DELETE FROM itemTypeFieldsCombined
+
+(4)(+0000000): DELETE FROM baseFieldMappingsCombined
+
+(4)(+0000001): INSERT INTO itemTypesCombined SELECT itemTypeID,
+typeName, display, 0 AS custom FROM itemTypes UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, typeName, display, 1 AS custom
+FROM customItemTypes
+
+(4)(+0000000): INSERT INTO fieldsCombined SELECT fieldID, fieldName,
+NULL AS label, fieldFormatID, 0 AS custom FROM fields UNION SELECT
+customFieldID + 10000 AS fieldID, fieldName, label, NULL, 1 AS custom
+FROM customFields
+
+(4)(+0000000): INSERT INTO itemTypeFieldsCombined SELECT itemTypeID,
+fieldID, hide, orderIndex FROM itemTypeFields UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, COALESCE(fieldID, customFieldID
++ 10000) AS fieldID, hide, orderIndex FROM customItemTypeFields
+
+(4)(+0000000): INSERT INTO baseFieldMappingsCombined SELECT itemTypeID,
+baseFieldID, fieldID FROM baseFieldMappings UNION SELECT
+customItemTypeID + 10000 AS itemTypeID, baseFieldID, customFieldID +
+10000 AS fieldID FROM customBaseFieldMappings
+
+(4)(+0000006): Committed DB transaction upmUPxKL
+
+(4)(+0000000): PRAGMA foreign_keys = true
+
+(4)(+0000000): Beginning DB transaction ArSZ74zf
+
+(4)(+0000001): SELECT value FROM settings WHERE setting='client' AND
+key='lastVersion'
+
+(4)(+0000000): Committed DB transaction ArSZ74zf
+
+(4)(+0000001): SELECT key, value FROM settings WHERE setting='account'
+
+(4)(+0000001): SELECT userID, name FROM users
+
+(4)(+0000000): SELECT L.libraryID, L.type AS _libraryType, L.editable AS
+_libraryEditable, L.filesEditable AS _libraryFilesEditable, L.version AS
+_libraryVersion, L.storageVersion AS _libraryStorageVersion, L.lastSync
+AS _libraryLastSync, L.archived AS _libraryArchived, (SELECT COUNT(*)>0
+FROM collections C WHERE C.libraryID=L.libraryID) AS hasCollections,
+(SELECT COUNT(*)>0 FROM savedSearches S WHERE S.libraryID=L.libraryID)
+AS hasSearches FROM libraries L WHERE type NOT IN (?,?) ['feed', 'group']
+
+(4)(+0000000): SELECT L.libraryID, L.type AS _libraryType, L.editable AS
+_libraryEditable, L.filesEditable AS _libraryFilesEditable, L.version AS
+_libraryVersion, L.storageVersion AS _libraryStorageVersion, L.lastSync
+AS _libraryLastSync, L.archived AS _libraryArchived, (SELECT COUNT(*)>0
+FROM collections C WHERE C.libraryID=L.libraryID) AS hasCollections,
+(SELECT COUNT(*)>0 FROM savedSearches S WHERE S.libraryID=L.libraryID)
+AS hasSearches, F.name AS _feedName, F.url AS _feedUrl, F.lastUpdate AS
+_feedLastUpdate, F.lastCheck AS _feedLastCheck, F.lastCheckError AS
+_feedLastCheckError, F.cleanupUnreadAfter AS _feedCleanupUnreadAfter,
+F.cleanupReadAfter AS _feedCleanupReadAfter, F.refreshInterval AS
+_feedRefreshInterval, (SELECT COUNT(*) FROM items I JOIN feedItems FI
+USING (itemID) WHERE I.libraryID=F.libraryID AND FI.readTime IS NULL) AS
+_feedUnreadCount FROM feeds F JOIN libraries L USING (libraryID)
+
+(4)(+0000000): SELECT L.libraryID, L.type AS _libraryType, L.editable AS
+_libraryEditable, L.filesEditable AS _libraryFilesEditable, L.version AS
+_libraryVersion, L.storageVersion AS _libraryStorageVersion, L.lastSync
+AS _libraryLastSync, L.archived AS _libraryArchived, (SELECT COUNT(*)>0
+FROM collections C WHERE C.libraryID=L.libraryID) AS hasCollections,
+(SELECT COUNT(*)>0 FROM savedSearches S WHERE S.libraryID=L.libraryID)
+AS hasSearches, G.groupID, G.name AS _groupName, G.description AS
+_groupDescription, G.version AS _groupVersion FROM groups G JOIN
+libraries L USING (libraryID)
+
+(4)(+0000001): SELECT COALESCE(MAX(collectionID) + 1, 1) FROM collections
+
+(4)(+0000000): SELECT COALESCE(MAX(creatorID) + 1, 1) FROM creators
+
+(4)(+0000000): SELECT COALESCE(MAX(creatorTypeID) + 1, 1) FROM creatorTypes
+
+(4)(+0000000): SELECT COALESCE(MAX(customFieldID) + 1, 1) FROM customFields
+
+(4)(+0000000): SELECT COALESCE(MAX(customItemTypeID) + 1, 1) FROM
+customItemTypes
+
+(4)(+0000000): SELECT COALESCE(MAX(fieldID) + 1, 1) FROM fields
+
+(4)(+0000001): SELECT COALESCE(MAX(valueID) + 1, 1) FROM itemDataValues
+
+(4)(+0000000): SELECT COALESCE(MAX(itemTypeID) + 1, 1) FROM itemTypes
+
+(4)(+0000000): SELECT COALESCE(MAX(itemID) + 1, 1) FROM items
+
+(4)(+0000000): SELECT COALESCE(MAX(libraryID) + 1, 1) FROM libraries
+
+(4)(+0000000): SELECT COALESCE(MAX(proxyID) + 1, 1) FROM proxies
+
+(4)(+0000000): SELECT COALESCE(MAX(savedSearchID) + 1, 1) FROM savedSearches
+
+(4)(+0000001): SELECT COALESCE(MAX(tagID) + 1, 1) FROM tags
+
+(4)(+0000000): SELECT itemTypeID AS id, typeName AS name, custom FROM
+itemTypesCombined
+
+(4)(+0000000): SELECT itemTypeID AS id, typeName AS name, custom FROM
+itemTypesCombined WHERE typeName IN ('webpage', 'attachment', 'note',
+'annotation')
+
+(4)(+0000000): SELECT customItemTypeID AS id, label, icon FROM
+customItemTypes
+
+(4)(+0000001): SELECT * FROM fieldFormats
+
+(4)(+0000000): SELECT * FROM fieldsCombined
+
+(4)(+0000000): SELECT fieldID, itemTypeID FROM itemTypeFieldsCombined
+
+(4)(+0000004): SELECT DISTINCT baseFieldID FROM baseFieldMappingsCombined
+
+(4)(+0000002): SELECT IT.itemTypeID, F.fieldID AS baseFieldID,
+BFM.fieldID FROM itemTypesCombined IT LEFT JOIN fieldsCombined F LEFT
+JOIN baseFieldMappingsCombined BFM ON (IT.itemTypeID=BFM.itemTypeID AND
+F.fieldID=BFM.baseFieldID)
+
+(4)(+0000068): SELECT DISTINCT baseFieldID FROM baseFieldMappingsCombined
+
+(4)(+0000021): SELECT itemTypeID, baseFieldID, fieldID, fieldName FROM
+baseFieldMappingsCombined JOIN fieldsCombined USING (fieldID)
+
+(4)(+0000001): SELECT DISTINCT fieldID FROM baseFieldMappingsCombined
+
+(4)(+0000001): SELECT itemTypeID, fieldID FROM itemTypeFieldsCombined
+ORDER BY orderIndex
+
+(4)(+0000003): Registering notifier observer 'tab_1m' for [tab]
+
+(4)(+0000006): SELECT creatorTypeID AS id, creatorType AS name FROM
+creatorTypes
+
+(4)(+0000001): SELECT itemTypeID, creatorTypeID AS id, creatorType AS
+name, primaryField FROM itemTypeCreatorTypes NATURAL JOIN creatorTypes
+
+(4)(+0000002): SELECT itemTypeID, creatorTypeID FROM
+itemTypeCreatorTypes WHERE primaryField=1
+
+(4)(+0000000): SELECT fileTypeID AS id, fileType AS name FROM fileTypes
+
+(4)(+0000000): SELECT charsetID AS id, charset AS name FROM charsets
+
+(4)(+0000001): SELECT predicateID AS id, predicate AS name FROM
+relationPredicates
+
+(3)(+0000000): Getting contents of /mnt/d/git/zotero-search-
+replace/.scaffold/profile/session.json
+
+(3)(+0000001): Running unlock callbacks
+
+(3)(+0000001): HTTP server listening on 127.0.0.1:23124
+
+(4)(+0000000): ATTACH ':memory:' AS 'indexing'
+
+(4)(+0000000): CREATE TABLE indexing.fulltextWords (word NOT NULL)
+
+(4)(+0000000): Registering notifier observer 'tags_6L' for [setting]
+
+(4)(+0000000): Registering notifier observer
+'autoRenameFileFromParent_Xf' for [item] with priority 150
+
+(4)(+0000000): SELECT version FROM version WHERE schema='lastsync'
+
+(4)(+0000001): SELECT version FROM version WHERE schema='lastlocalsync'
+
+(4)(+0000000): SELECT name, syncObjectTypeID AS id FROM syncObjectTypes
+
+(4)(+0000000): Registering notifier observer 'storageLocal_ZP' for [group]
+
+(4)(+0000000): Registering notifier observer 'deleteLog_Y6' for
+[collection,item,search,setting]
+
+(4)(+0000000): Registering notifier observer 'autosync_wV' for all types
+
+(3)(+0000000): Registering auto-sync idle observer
+
+(4)(+0000000): Registering notifier observer 'storageFileOpen_bJ' for [file]
+
+(4)(+0000000): Registering notifier observer 'streamer_Q2' for [api-key]
+
+(3)(+0000000): Registering nsIObserver
+
+(3)(+0000000): CookieSandbox: Registering observers
+
+(4)(+0000000): SELECT * FROM proxies
+
+(4)(+0000002): SELECT ROWID AS id, libraryID, key FROM collections
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/locate/engines.json
+
+(4)(+0000000): SELECT ROWID AS id, libraryID, key FROM items
+
+(4)(+0000114): SELECT ROWID AS id, libraryID, key FROM savedSearches
+
+(4)(+0000005): SELECT fieldName FROM fieldsCombined WHERE fieldName NOT
+IN ('accessDate', 'date', 'pages', 'section','seriesNumber','issue')
+
+(3)(+0000000): Refreshing item box
+
+(2)(+0000000): No item to refresh
+
+(1)(+0000001): Unknown item type 'nsfReviewer'
+
+(1)(+0000000): Unknown item type 'nsfReviewer'
+
+(4)(+0000001): SELECT tagID, name FROM tags
+
+(4)(+0000046): SELECT * FROM creators
+
+(3)(+0000108): Loading collection relations
+
+(4)(+0000000): SELECT * FROM collectionRelations JOIN relationPredicates
+USING (predicateID)
+
+(3)(+0000001): Loaded collection relations in 1 ms
+
+(3)(+0000000): Loading item relations
+
+(4)(+0000000): SELECT * FROM itemRelations JOIN relationPredicates USING
+(predicateID)
+
+(3)(+0000000): Loaded item relations in 0 ms
+
+(4)(+0000000): SELECT itemID AS id, fieldID, value FROM itemData JOIN
+itemDataValues USING (valueID) WHERE fieldID IN (?, ?) [8, 19]
+
+(4)(+0000109): Registering notifier observer 'retractions_Jd' for
+[item,group] with priority 20
+
+(3)(+0000002): Getting contents of /mnt/d/git/zotero-search-
+replace/.scaffold/profile/retractions.json
+
+(4)(+0000039): SELECT libraryID, itemID, DI.itemID IS NOT NULL AS
+deleted, RI.flag FROM items JOIN retractedItems RI USING (itemID) LEFT
+JOIN deletedItems DI USING (itemID)
+
+(3)(+0000002): Loading synced settings for library 1
+
+(4)(+0000000): SELECT setting, value, synced, version FROM
+syncedSettings WHERE libraryID=? [1]
+
+(3)(+0000000): Loading all collections in My Library
+
+(3)(+0000000): Loading primaryData for collections in My Library
+
+(4)(+0000000): SELECT O.collectionID, O.collectionName AS name,
+O.libraryID, O.key, O.version, O.synced, DC.collectionID IS NOT NULL AS
+deleted, O.parentCollectionID AS parentID, CP.key AS parentKey, (SELECT
+COUNT(*) FROM collections WHERE parentCollectionID=O.collectionID) != 0
+AS hasChildCollections, (SELECT COUNT(*) FROM collectionItems WHERE
+collectionID=O.collectionID) != 0 AS hasChildItems FROM collections O
+LEFT JOIN deletedCollections DC ON (O.collectionID=DC.collectionID)LEFT
+JOIN collections CP ON (O.parentCollectionID=CP.collectionID) WHERE 1
+AND O.libraryID=? [1]
+
+(3)(+0000002): Loaded primaryData in My Library in 2 ms
+
+(3)(+0000000): Loading childCollections for collections in My Library
+
+(4)(+0000000): SELECT C1.collectionID, C2.collectionID AS
+childCollectionID FROM collections C1 LEFT JOIN collections C2 ON
+(C1.collectionID=C2.parentCollectionID) WHERE C1.libraryID=? [1]
+
+(3)(+0000000): Loaded childCollections in My Library in 0 ms
+
+(3)(+0000001): Loading childItems for collections in My Library
+
+(4)(+0000000): SELECT collectionID, itemID FROM collections LEFT JOIN
+collectionItems USING (collectionID) WHERE libraryID=? [1]
+
+(3)(+0000028): Loaded childItems in My Library in 29 ms
+
+(3)(+0000000): Loading relations for collections in My Library
+
+(4)(+0000000): SELECT collectionID, predicate, object FROM collections
+LEFT JOIN collectionRelations USING (collectionID) LEFT JOIN
+relationPredicates USING (predicateID) WHERE libraryID=? [1]
+
+(3)(+0000001): Loaded relations in My Library in 1 ms
+
+(3)(+0000000): Loaded collections in My Library in 32 ms
+
+(3)(+0000000): Loading all searches in My Library
+
+(3)(+0000000): Loading primaryData for searches in My Library
+
+(4)(+0000000): SELECT O.savedSearchID, O.savedSearchName AS name,
+O.libraryID, O.key, O.version, O.synced, DS.savedSearchID IS NOT NULL AS
+deleted FROM savedSearches O LEFT JOIN deletedSearches DS ON
+(O.savedSearchID=DS.savedSearchID) WHERE 1 AND O.libraryID=? [1]
+
+(3)(+0000000): Loaded primaryData in My Library in 0 ms
+
+(3)(+0000000): Loading conditions for searches in My Library
+
+(4)(+0000000): SELECT savedSearchID, searchConditionID, condition,
+operator, value, required FROM savedSearches LEFT JOIN
+savedSearchConditions USING (savedSearchID) WHERE libraryID=?ORDER BY
+savedSearchID, searchConditionID [1]
+
+(3)(+0000000): Loaded conditions in My Library in 0 ms
+
+(3)(+0000000): Loaded searches in My Library in 0 ms
+
+(3)(+0000001): Initializing Quick Copy
+
+(4)(+0000000): Registering notifier observer 'feedsUpdate_Bj' for [sync]
+
+(3)(+0000000): Running initialization callbacks
+
+(3)(+0000000): Triggering "zotero-loaded" event
+
+(3)(+0000000): Initializing Word Processor plugins
+
+(3)(+0000001): PluginInstaller LibreOffice: Fetching addon info
+
+(3)(+0000001): HTTP GET resource://zotero-libreoffice-integration/
+version.txt
+
+(3)(+0000003): LibreOfficePlugin: Communication server listening on
+127.0.0.1:23116
+
+(3)(+0000000): LibreOfficePlugin: Registering shutdown listener
+
+(3)(+0000000): Initializing Zotero pane
+
+(3)(+0000012): Initializing React CollectionTree
+
+(4)(+0000011): Registering notifier observer 'collectionTree_d2' for
+[collection,search,feed,share,group,trash,bucket] with priority 25
+
+(3)(+0000002): Refreshing collections pane
+
+(4)(+0000000): SELECT savedSearchID FROM savedSearches WHERE libraryID=? [1]
+
+(4)(+0000000): Registering notifier observer 'tagSelector_1l' for
+[collection-item,item,item-tag,tag,setting]
+
+(3)(+0000001): Rendering tag selector
+
+(3)(+0000000): Rendering tag list
+
+(3)(+0000001): React CollectionTree initialized
+
+(3)(+0000004): Initializing React ItemTree main
+
+(3)(+0000000): HTTP GET resource://zotero-libreoffice-integration/
+version.txt succeeded with 200
+
+(3)(+0000000): PluginInstaller LibreOffice: Addon info fetched. version:
+7.0.6.SOURCE, file version: 7.0.6pre, installed version: attempted:
+
+(3)(+0000000): PluginInstaller LibreOffice: Skipping automatic
+installation because skipInstallation is true
+
+(4)(+0000001): SELECT itemID FROM items JOIN deletedItems USING (itemID)
+WHERE libraryID=? [1]
+
+(4)(+0000001): SELECT collectionID FROM collections JOIN
+deletedCollections USING (collectionID) WHERE libraryID=? [1]
+
+(4)(+0000000): SELECT savedSearchID FROM savedSearches JOIN
+deletedSearches USING (savedSearchID) WHERE libraryID=? [1]
+
+(3)(+0000004): CollectionTree.selectWait(): selectEventsSuppressed. Not
+waiting to select row 3
+
+(3)(+0000001): Waiting for items to load for library 1
+
+(3)(+0000000): Loading all items in My Library
+
+(3)(+0000000): Loading primaryData for items in My Library
+
+(4)(+0000000): SELECT O.itemID, O.itemTypeID, O.dateAdded,
+O.dateModified, O.libraryID, O.key, O.version, O.synced,
+createdByUserID, lastModifiedByUserID, COALESCE(CASE (SELECT COUNT(*)
+FROM itemCreators IC LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1) WHEN 0 THEN NULL WHEN 1 THEN
+(SELECT lastName FROM itemCreators IC NATURAL JOIN creators LEFT JOIN
+itemTypeCreatorTypes ITCT ON (IC.creatorTypeID=ITCT.creatorTypeID AND
+ITCT.itemTypeID=O.itemTypeID) WHERE itemID=O.itemID AND primaryField=1)
+WHEN 2 THEN (SELECT PRINTF('%s and %s', (SELECT '⁨' || lastName || '⁩'
+FROM itemCreators IC NATURAL JOIN creators LEFT JOIN
+itemTypeCreatorTypes ITCT ON (IC.creatorTypeID=ITCT.creatorTypeID AND
+ITCT.itemTypeID=O.itemTypeID) WHERE itemID=O.itemID AND primaryField=1
+ORDER BY orderIndex LIMIT 1), (SELECT '⁨' || lastName || '⁩' FROM
+itemCreators IC NATURAL JOIN creators LEFT JOIN itemTypeCreatorTypes
+ITCT ON (IC.creatorTypeID=ITCT.creatorTypeID AND
+ITCT.itemTypeID=O.itemTypeID) WHERE itemID=O.itemID AND primaryField=1
+ORDER BY orderIndex LIMIT 1,1))) ELSE (SELECT (SELECT lastName FROM
+itemCreators IC NATURAL JOIN creators LEFT JOIN itemTypeCreatorTypes
+ITCT ON (IC.creatorTypeID=ITCT.creatorTypeID AND
+ITCT.itemTypeID=O.itemTypeID) WHERE itemID=O.itemID AND primaryField=1
+ORDER BY orderIndex LIMIT 1) || ' et al.' ) END, CASE (SELECT COUNT(*)
+FROM itemCreators WHERE itemID=O.itemID AND creatorTypeID=12) WHEN 0
+THEN NULL WHEN 1 THEN (SELECT lastName FROM itemCreators NATURAL JOIN
+creators WHERE itemID=O.itemID AND creatorTypeID=12) WHEN 2 THEN (SELECT
+PRINTF('%s and %s', (SELECT '⁨' || lastName || '⁩' FROM itemCreators
+NATURAL JOIN creators WHERE itemID=O.itemID AND creatorTypeID=12 ORDER
+BY orderIndex LIMIT 1), (SELECT '⁨' || lastName || '⁩' FROM itemCreators
+NATURAL JOIN creators WHERE itemID=O.itemID AND creatorTypeID=12 ORDER
+BY orderIndex LIMIT 1,1) )) ELSE (SELECT (SELECT lastName FROM
+itemCreators NATURAL JOIN creators WHERE itemID=O.itemID AND
+creatorTypeID=12 ORDER BY orderIndex LIMIT 1) || ' et al.' ) END, CASE
+(SELECT COUNT(*) FROM itemCreators WHERE itemID=O.itemID AND
+creatorTypeID=2) WHEN 0 THEN NULL WHEN 1 THEN (SELECT lastName FROM
+itemCreators NATURAL JOIN creators WHERE itemID=O.itemID AND
+creatorTypeID=2) WHEN 2 THEN (SELECT PRINTF('%s and %s', (SELECT '⁨' ||
+lastName || '⁩' FROM itemCreators NATURAL JOIN creators WHERE
+itemID=O.itemID AND creatorTypeID=2 ORDER BY orderIndex LIMIT 1),
+(SELECT '⁨' || lastName || '⁩' FROM itemCreators NATURAL JOIN creators
+WHERE itemID=O.itemID AND creatorTypeID=2 ORDER BY orderIndex LIMIT
+1,1) )) ELSE (SELECT (SELECT lastName FROM itemCreators NATURAL JOIN
+creators WHERE itemID=O.itemID AND creatorTypeID=2 ORDER BY orderIndex
+LIMIT 1) || ' et al.' ) END) AS firstCreator, COALESCE(CASE (SELECT
+COUNT(*) FROM itemCreators IC LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1) WHEN 0 THEN NULL WHEN 1 THEN
+(SELECT lastName || ' ' || firstName FROM itemCreators IC NATURAL JOIN
+creators LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1) WHEN 2 THEN (SELECT (SELECT
+lastName || ' ' || firstName FROM itemCreators IC NATURAL JOIN creators
+LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1 ORDER BY orderIndex LIMIT 1) ||
+' ' || (SELECT lastName || ' ' || firstName FROM itemCreators IC NATURAL
+JOIN creators LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1 ORDER BY orderIndex LIMIT 1,1))
+ELSE (SELECT (SELECT lastName || ' ' || firstName FROM itemCreators IC
+NATURAL JOIN creators LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1 ORDER BY orderIndex LIMIT 1) ||
+' ' || (SELECT lastName || ' ' || firstName FROM itemCreators IC NATURAL
+JOIN creators LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1 ORDER BY orderIndex LIMIT 1,1)
+|| ' ' || (SELECT lastName || ' ' || firstName FROM itemCreators IC
+NATURAL JOIN creators LEFT JOIN itemTypeCreatorTypes ITCT ON
+(IC.creatorTypeID=ITCT.creatorTypeID AND ITCT.itemTypeID=O.itemTypeID)
+WHERE itemID=O.itemID AND primaryField=1 ORDER BY orderIndex LIMIT 2,1))
+END, CASE (SELECT COUNT(*) FROM itemCreators WHERE itemID=O.itemID AND
+creatorTypeID=12) WHEN 0 THEN NULL WHEN 1 THEN (SELECT lastName || ' '
+|| firstName FROM itemCreators NATURAL JOIN creators WHERE
+itemID=O.itemID AND creatorTypeID=12) WHEN 2 THEN (SELECT (SELECT
+lastName || ' ' || firstName FROM itemCreators NATURAL JOIN creators
+WHERE itemID=O.itemID AND creatorTypeID=12 ORDER BY orderIndex LIMIT 1)
+|| ' ' || (SELECT lastName || ' ' || firstName FROM itemCreators NATURAL
+JOIN creators WHERE itemID=O.itemID AND creatorTypeID=12 ORDER BY
+orderIndex LIMIT 1,1) ) ELSE (SELECT (SELECT lastName || ' ' ||
+firstName FROM itemCreators NATURAL JOIN creators WHERE itemID=O.itemID
+AND creatorTypeID=12 ORDER BY orderIndex LIMIT 1) || ' ' || (SELECT
+lastName || ' ' || firstName FROM itemCreators NATURAL JOIN creators
+WHERE itemID=O.itemID AND creatorTypeID=12 ORDER BY orderIndex LIMIT
+1,1) || ' ' || (SELECT lastName || ' ' || firstName FROM itemCreators
+NATURAL JOIN creators WHERE itemID=O.itemID AND creatorTypeID=12 ORDER
+BY orderIndex LIMIT 2,1)) END, CASE (SELECT COUNT(*) FROM itemCreators
+WHERE itemID=O.itemID AND creatorTypeID=2) WHEN 0 THEN NULL WHEN 1 THEN
+(SELECT lastName || ' ' || firstName FROM itemCreators NATURAL JOIN
+creators WHERE itemID=O.itemID AND creatorTypeID=2) WHEN 2 THEN (SELECT
+(SELECT lastName || ' ' || firstName FROM itemCreators NATURAL JOIN
+creators WHERE itemID=O.itemID AND creatorTypeID=2 ORDER BY orderIndex
+LIMIT 1) || ' ' || (SELECT lastName || ' ' || firstName FROM
+itemCreators NATURAL JOIN creators WHERE itemID=O.itemID AND
+creatorTypeID=2 ORDER BY orderIndex LIMIT 1,1) ) ELSE (SELECT (SELECT
+lastName || ' ' || firstName FROM itemCreators NATURAL JOIN creators
+WHERE itemID=O.itemID AND creatorTypeID=2 ORDER BY orderIndex LIMIT 1)
+|| ' ' || (SELECT lastName || ' ' || firstName FROM itemCreators NATURAL
+JOIN creators WHERE itemID=O.itemID AND creatorTypeID=2 ORDER BY
+orderIndex LIMIT 1,1) || ' ' || (SELECT lastName || ' ' || firstName
+FROM itemCreators NATURAL JOIN creators WHERE itemID=O.itemID AND
+creatorTypeID=2 ORDER BY orderIndex LIMIT 2,1)) END) AS sortCreator,
+DI.itemID IS NOT NULL AS deleted, PI.itemID IS NOT NULL AS
+inPublications, (CASE O.itemTypeID WHEN 3 THEN IAP.itemID WHEN 28 THEN
+INoP.itemID WHEN 1 THEN IAnP.itemID END) AS parentID, (CASE O.itemTypeID
+WHEN 3 THEN IAP.key WHEN 28 THEN INoP.key WHEN 1 THEN IAnP.key END) AS
+parentKey, CS.charset AS attachmentCharset, IA.linkMode AS
+attachmentLinkMode, IA.contentType AS attachmentContentType, IA.path AS
+attachmentPath, IA.syncState AS attachmentSyncState, IA.storageModTime
+AS attachmentSyncedModificationTime, IA.storageHash AS
+attachmentSyncedHash, IA.lastProcessedModificationTime AS
+attachmentLastProcessedModificationTime, FI.guid AS feedItemGUID,
+FI.readTime AS feedItemReadTime, FI.translatedTime AS
+feedItemTranslatedTime FROM items O LEFT JOIN itemAttachments IA USING
+(itemID) LEFT JOIN items IAP ON (IA.parentItemID=IAP.itemID) LEFT JOIN
+itemNotes INo ON (O.itemID=INo.itemID) LEFT JOIN items INoP ON
+(INo.parentItemID=INoP.itemID) LEFT JOIN itemAnnotations IAn ON
+(O.itemID=IAn.itemID) LEFT JOIN items IAnP ON
+(IAn.parentItemID=IAnP.itemID) LEFT JOIN deletedItems DI ON
+(O.itemID=DI.itemID) LEFT JOIN publicationsItems PI ON
+(O.itemID=PI.itemID) LEFT JOIN charsets CS ON
+(IA.charsetID=CS.charsetID)LEFT JOIN groupItems GI ON
+(O.itemID=GI.itemID) LEFT JOIN feedItems FI ON (FI.itemID=O.itemID)
+WHERE 1 AND O.libraryID=? [1]
+
+(4)(+0000015): Registering notifier observer 'itemTreeView_mA' for
+[item,collection-item,item-tag,share-
+items,bucket,feedItem,search,itemtree,collection] with priority 50
+
+(3)(+0000000): itemTree.render(). Displaying Item Pane Message
+
+(3)(+0000000): React ItemTree main initialized
+
+(3)(+0000001): User interface ready in 1080 ms
+
+(3)(+0000006): Connecting to streaming server at wss://stream.zotero.org/
+
+(3)(+0000029): itemTree.render(). Displaying Item Pane Message
+
+(4)(+0000002): Registering notifier observer 'XB' for [api-key]
+
+(4)(+0000000): Registering notifier observer 'syncReminder_7r' for [item]
+
+(5)(+0000234): CookieSandbox: Being paranoid about channel for
+stream.zotero.org
+
+(5)(+0000000): CookieSandbox: Cleared cookies to be sent to
+stream.zotero.org
+
+(3)(+0000003): Rendering tag selector
+
+(3)(+0000000): Rendering tag list
+
+(3)(+0000001): Tag selector updated
+
+(3)(+0000075): Loaded primaryData in My Library in 366 ms
+
+(3)(+0000000): Loading creators for items in My Library
+
+(4)(+0000000): SELECT itemID, creatorID, creatorTypeID, orderIndex FROM
+items LEFT JOIN itemCreators USING (itemID) WHERE libraryID=? ORDER BY
+itemID, orderIndex [1]
+
+(3)(+0000049): Calling bootstrap method 'startup' for plugin zotero-
+search-replace@marcinmilkowski.pl version 0.1.0 with reason APP_STARTUP
+
+(3)(+0000000): SearchReplace: startup called
+
+(3)(+0000000): SearchReplace: Zotero initializationPromise resolved.
+
+(3)(+0000000): SearchReplace: chromeHandle registered.
+
+(3)(+0000010): SearchReplace: bundled.js loaded.
+
+(3)(+0000000): SearchReplace: ZoteroSearchReplace exposed globally and
+to Zotero.SearchReplace.
+
+(3)(+0000000): SearchReplace: Search & Replace: Plugin started
+
+(3)(+0000000): SearchReplace: onMainWindowLoad called for window:
+chrome://zotero/content/zoteroPane.xhtml
+
+(3)(+0000007): SearchReplace: Loaded zotero-search-replace.js into window
+
+(3)(+0000000): SearchReplace: Updated Zotero.SearchReplace to window-
+level object
+
+(3)(+0000000): SearchReplace: Extension init called
+
+(3)(+0000000): SearchReplace: Extension initialized
+
+(3)(+0000000): SearchReplace: addUIElements called for window: chrome://
+zotero/content/zoteroPane.xhtml
+
+(3)(+0000000): SearchReplace: Attempting to add menu item
+
+(3)(+0000000): SearchReplace: Found Edit popup: #menu_EditPopup
+
+(3)(+0000000): SearchReplace: Found Edit popup
+
+(3)(+0000001): SearchReplace: Inserted before: Advanced Search
+
+(3)(+0000000): SearchReplace: Added Search & Replace menu item to Edit menu
+
+(3)(+0000000): SearchReplace: Attempting to add menu item
+
+(3)(+0000000): SearchReplace: Found Edit popup: #menu_EditPopup
+
+(3)(+0000000): SearchReplace: Found Edit popup
+
+(3)(+0000194): Loaded creators in My Library in 261 ms
+
+(3)(+0000000): Loading itemData for items in My Library
+
+(4)(+0000000): SELECT itemID, fieldID, value FROM items JOIN itemData
+USING (itemID) JOIN itemDataValues USING (valueID) WHERE libraryID=? AND
+itemTypeID!=? [1, 28]
+
+(5)(+0000103): CookieSandbox: Being paranoid about channel for
+ocsp.r2m04.amazontrust.com
+
+(5)(+0000000): CookieSandbox: Cleared cookies to be sent to
+ocsp.r2m04.amazontrust.com
+
+(4)(+0000448): SELECT itemID FROM items WHERE libraryID=? [1]
+
+(5)(+0000001): CookieSandbox: Being paranoid about channel for
+ocsp.r2m04.amazontrust.com
+
+(5)(+0000000): CookieSandbox: No Set-Cookie header received for
+ocsp.r2m04.amazontrust.com
+
+(4)(+0000276): SELECT itemID, title FROM items JOIN itemNotes USING
+(itemID) WHERE libraryID=? AND itemID NOT IN (SELECT itemID FROM
+itemAttachments) [1]
+
+(3)(+0000053): Loaded itemData in My Library in 881 ms
+
+(3)(+0000000): Loading note for items in My Library
+
+(4)(+0000000): SELECT itemID, note FROM items JOIN itemNotes USING
+(itemID) WHERE libraryID=? [1]
+
+(3)(+0000002): SearchReplace: Attempting to add menu item
+
+(3)(+0000000): SearchReplace: Found Edit popup: #menu_EditPopup
+
+(3)(+0000000): SearchReplace: Found Edit popup
+
+(4)(+0000000): SELECT itemID FROM items WHERE libraryID=? AND itemTypeID
+IN (?, ?) AND itemID NOT IN (SELECT itemID FROM itemNotes) [1, 28, 3]
+
+(3)(+0000011): Loaded note in My Library in 13 ms
+
+(3)(+0000001): Loading annotation for items in My Library
+
+(4)(+0000000): SELECT itemID, IA.parentItemID, IA.type, IA.authorName,
+IA.text, IA.comment, IA.color, IA.sortIndex, IA.isExternal FROM items
+JOIN itemAnnotations IA USING (itemID) WHERE libraryID=? [1]
+
+(3)(+0000002): Loaded annotation in My Library in 3 ms
+
+(3)(+0000000): Loading annotationDeferred for items in My Library
+
+(4)(+0000000): SELECT itemID, IA.position, IA.pageLabel FROM items JOIN
+itemAnnotations IA USING (itemID) WHERE libraryID=? [1]
+
+(3)(+0000003): Loaded annotationDeferred in My Library in 3 ms
+
+(3)(+0000000): Loading childItems for items in My Library
+
+(4)(+0000000): SELECT parentItemID, A.itemID, value AS title, CASE WHEN
+DI.itemID IS NULL THEN 0 ELSE 1 END AS trashed FROM itemAttachments A
+JOIN items I ON (A.parentItemID=I.itemID) LEFT JOIN itemData ID ON
+(fieldID=1 AND A.itemID=ID.itemID) LEFT JOIN itemDataValues IDV USING
+(valueID) LEFT JOIN deletedItems DI USING (itemID) WHERE libraryID=?
+ORDER BY parentItemID [1]
+
+(4)(+0000019): SELECT parentItemID, N.itemID, title, CASE WHEN DI.itemID
+IS NULL THEN 0 ELSE 1 END AS trashed FROM itemNotes N JOIN items I ON
+(N.parentItemID=I.itemID) LEFT JOIN deletedItems DI USING (itemID) WHERE
+libraryID=? ORDER BY parentItemID [1]
+
+(4)(+0000002): SELECT parentItemID, IAn.itemID, text || ' - ' || comment
+AS title, CASE WHEN DI.itemID IS NULL THEN 0 ELSE 1 END AS trashed FROM
+itemAnnotations IAn JOIN items I ON (IAn.parentItemID=I.itemID) LEFT
+JOIN deletedItems DI USING (itemID) WHERE libraryID=? ORDER BY
+parentItemID, sortIndex [1]
+
+(4)(+0000002): SELECT itemID FROM items I WHERE libraryID=? [1]
+
+(3)(+0000038): Loaded childItems in My Library in 61 ms
+
+(3)(+0000000): Loading tags for items in My Library
+
+(4)(+0000000): SELECT itemID, name, type FROM items LEFT JOIN itemTags
+USING (itemID) LEFT JOIN tags USING (tagID) WHERE libraryID=? [1]
+
+(3)(+0000143): Loaded tags in My Library in 143 ms
+
+(3)(+0000003): Loading collections for items in My Library
+
+(4)(+0000000): SELECT itemID, collectionID FROM items LEFT JOIN
+collectionItems USING (itemID) WHERE libraryID=? [1]
+
+(5)(+0000000): CookieSandbox: Being paranoid about channel for
+stream.zotero.org
+
+(5)(+0000000): CookieSandbox: No Set-Cookie header received for
+stream.zotero.org
+
+(3)(+0000007): WebSocket connection opened
+
+(3)(+0000001): WebSocket message: {"event":"connected","retry":10000}
+
+(3)(+0000000): WebSocket message send:
+{"action":"createSubscriptions","subscriptions":[{"topics":
+["styles","translators"]}]}
+
+(3)(+0000039): Loaded collections in My Library in 47 ms
+
+(3)(+0000000): Loading relations for items in My Library
+
+(4)(+0000000): SELECT itemID, predicate, object FROM items LEFT JOIN
+itemRelations USING (itemID) LEFT JOIN relationPredicates USING
+(predicateID) WHERE libraryID=? [1]
+
+(3)(+0000051): Loaded relations in My Library in 51 ms
+
+(3)(+0000000): Loaded items in My Library in 1832 ms
+
+(3)(+0000000): itemTree.changeCollectionTreeRow(): P1
+
+(3)(+0000000): Getting contents of /mnt/d/git/zotero-search-
+replace/.scaffold/profile/treePrefs.json
+
+(3)(+0000000): React CollectionTree loaded
+
+(3)(+0000003): Writing column prefs of length 4268 to file /mnt/d/git/
+zotero-search-replace/.scaffold/profile/treePrefs.json
+
+(3)(+0000007): Getting contents of /mnt/d/git/zotero-search-
+replace/.scaffold/profile/treePrefs.json
+
+(3)(+0000023): Refreshing items list for item-tree-main-default
+
+(4)(+0000000): CREATE TEMPORARY TABLE tmpSearchResults_pN8dWUfI AS
+SELECT itemID FROM items WHERE (itemID NOT IN (SELECT itemID FROM
+deletedItems UNION SELECT itemID FROM itemNotes WHERE parentItemID IS
+NOT NULL AND parentItemID IN (SELECT itemID FROM deletedItems) UNION
+SELECT itemID FROM itemAttachments WHERE parentItemID IS NOT NULL AND
+parentItemID IN (SELECT itemID FROM deletedItems)UNION SELECT itemID
+FROM itemAnnotations WHERE parentItemID IN (SELECT itemID FROM
+deletedItems)UNION SELECT itemID FROM itemAnnotations WHERE parentItemID
+IN (SELECT itemID FROM itemAttachments WHERE parentItemID IN (SELECT
+itemID FROM deletedItems)))) AND (itemID IN (SELECT itemID FROM
+publicationsItems)) AND (itemID IN (SELECT itemID FROM items WHERE
+libraryID=?)) [1]
+
+(4)(+0000013): CREATE INDEX tmpSearchResults_pN8dWUfI_itemID ON
+tmpSearchResults_pN8dWUfI(itemID)
+
+(3)(+0000000): WebSocket message:
+{"event":"subscriptionsCreated","subscriptions":[{"topics":
+["styles","translators"]}],"errors":[]}
+
+(4)(+0000000): SELECT GROUP_CONCAT(itemID) FROM items WHERE itemID IN
+(SELECT itemID FROM items WHERE (itemID NOT IN (SELECT itemID FROM
+deletedItems UNION SELECT itemID FROM itemNotes WHERE parentItemID IS
+NOT NULL AND parentItemID IN (SELECT itemID FROM deletedItems) UNION
+SELECT itemID FROM itemAttachments WHERE parentItemID IS NOT NULL AND
+parentItemID IN (SELECT itemID FROM deletedItems)UNION SELECT itemID
+FROM itemAnnotations WHERE parentItemID IN (SELECT itemID FROM
+deletedItems)UNION SELECT itemID FROM itemAnnotations WHERE parentItemID
+IN (SELECT itemID FROM itemAttachments WHERE parentItemID IN (SELECT
+itemID FROM deletedItems)))) AND (itemID IN (SELECT itemID FROM items
+WHERE libraryID=?))) AND (itemID IN (SELECT itemID FROM
+tmpSearchResults_pN8dWUfI)) [1]
+
+(4)(+0000007): DROP TABLE IF EXISTS tmpSearchResults_pN8dWUfI
+
+(3)(+0000000): Refreshed open parents in 0 ms
+
+(3)(+0000000): Updating tag selector from current view
+
+(3)(+0000000): Creating tmpSearchResults_hdsMhL4z with 0 items
+
+(3)(+0000000): Rendering tag selector
+
+(3)(+0000001): Rendering tag list
+
+(3)(+0000000): Tag selector updated
+
+(4)(+0000001): SELECT DISTINCT tagID || ':' || type FROM itemTags JOIN
+tags USING (tagID) WHERE 1 AND itemID IN (SELECT itemID FROM
+tmpSearchResults_hdsMhL4z UNION SELECT itemID FROM itemAnnotations WHERE
+parentItemID IN (SELECT itemID FROM tmpSearchResults_hdsMhL4z)) ORDER BY
+name COLLATE NOCASE
+
+(3)(+0000000): Tags haven't changed
+
+(3)(+0000000): itemTree.render(). Displaying Item Tree
+
+(2)(+0000001): Storing itemTree item-tree-main-default column prefs
+
+(3)(+0000000): Columns title width 574.6666666666666
+
+(3)(+0000000): Columns firstCreator width 131.66666666666666
+
+(3)(+0000006): itemTree.render(). Displaying Item Pane Message
+
+(3)(+0000004): Rendering tag selector
+
+(3)(+0000000): Rendering tag list
+
+(3)(+0000000): Tag selector updated
+
+(3)(+0001219): No general proxy or PAC file found -- assuming direct
+connection
+
+(4)(+0000001): Sync not enabled -- skipping auto-sync
+
+(3)(+0000000): Pausing feed updating
+
+(4)(+0000000): SELECT COUNT(*) FROM settings WHERE
+setting='globalSchema' AND key='migrateExtra'
+
+(3)(+0000000): Resuming feed updating
+
+(3)(+0000000): Scheduling next feed update
+
+(4)(+0000000): SELECT ( CASE WHEN lastCheck IS NULL THEN 0 ELSE
+strftime('%s', lastCheck) + refreshInterval * 60 - strftime('%s', 'now')
+END ) AS nextCheck FROM feeds WHERE refreshInterval IS NOT NULL ORDER BY
+nextCheck ASC LIMIT 1
+
+(3)(+0000000): No feeds with auto-update
+
+(3)(+0000315): SearchReplace: Attempting to add menu item
+
+(3)(+0000000): SearchReplace: Found Edit popup: #menu_EditPopup
+
+(3)(+0000000): SearchReplace: Found Edit popup
+
+(3)(+0000747): Updating bundled files
+
+(3)(+0000000): Initializing translators
+
+(4)(+0000000): SELECT rowid, fileName, metadataJSON, lastModifiedTime
+FROM translatorCache
+
+(3)(+0000158): Cached 746 translators in 158 ms
+
+(3)(+0000000): HTTP GET resource://zotero/schema/repotime.txt
+
+(3)(+0000000): HTTP GET resource://zotero/schema/repotime.txt succeeded
+with 200
+
+(4)(+0000002): SELECT version FROM version WHERE schema='delete'
+
+(3)(+0000000): Getting contents of input stream
+
+(4)(+0000001): SELECT version FROM version WHERE schema=? ['translators']
+
+(3)(+0000000): Installed translators are up-to-date with XPI
+
+(3)(+0000000): Initializing styles
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/american-
+sociological-association.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/modern-
+language-association.csl
+
+(3)(+0000002): Getting contents of /home/milek/Zotero/styles/chicago-
+shortened-notes-bibliography.csl
+
+(3)(+0000007): Getting contents of /home/milek/Zotero/styles/elsevier-
+harvard.csl
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/styles/american-
+medical-association.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/chicago-
+notes-bibliography.csl
+
+(3)(+0000009): Getting contents of /home/milek/Zotero/styles/american-
+chemical-society.csl
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/styles/apa.csl
+
+(3)(+0000004): Getting contents of /home/milek/Zotero/styles/nature.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/ieee.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/chicago-
+author-date.csl
+
+(3)(+0000006): Getting contents of /home/milek/Zotero/styles/vancouver.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/american-
+political-science-association.csl
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/styles/harvard-
+cite-them-right.csl
+
+(3)(+0000001): Getting contents of /home/milek/Zotero/styles/mhra-notes.csl
+
+(3)(+0000006): Getting contents of /home/milek/Zotero/styles/nlm-
+citation-sequence.csl
+
+(3)(+0000001): Cached 16 styles in 42 ms
+
+(3)(+0000000): HTTP GET chrome://zotero/content/locale/csl/locales.json
+
+(3)(+0000000): HTTP GET chrome://zotero/content/locale/csl/locales.json
+succeeded with 200
+
+(3)(+0000000): HTTP GET resource://zotero/schema/renamed-styles.json
+
+(3)(+0000001): HTTP GET resource://zotero/schema/renamed-styles.json
+succeeded with 200
+
+(3)(+0000001): HTTP GET resource://zotero/schema/repotime.txt
+
+(3)(+0000000): HTTP GET resource://zotero/schema/repotime.txt succeeded
+with 200
+
+(4)(+0000001): SELECT version FROM version WHERE schema='delete'
+
+(3)(+0000000): Getting contents of input stream
+
+(4)(+0000000): SELECT version FROM version WHERE schema=? ['styles']
+
+(3)(+0000001): Installed styles are up-to-date with XPI
+
+(3)(+0000000): HTTP GET https://api.zotero.org/retractions/list
+
+(5)(+0000000): CookieSandbox: Not touching channel for api.zotero.org
+
+(3)(+0000148): SearchReplace: Opening Search & Replace dialog
+
+(5)(+0000242): CookieSandbox: Not touching channel for api.zotero.org
+
+(3)(+0000001): HTTP GET https://api.zotero.org/retractions/list
+succeeded with 304
+
+(3)(+0000000): Retraction list is up to date
+
+(4)(+0000000): SELECT version FROM version WHERE schema='repository'
+
+(3)(+0000000): Checking repository for translator and style updates
+
+(3)(+0000001): HTTP POST
+"styles=%5B%7B%22id%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Famerican-sociological-association%22%2C%22updated%22%3A1767467107%2C%22url%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Famerican-sociological-association%22%7D%2C%7B%22id%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Fmodern-language-association%22%2C%22updated%22%3A1768172071%2C%22url%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Fmodern-language-association%22%7D%2C%7B%22id%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Fchicago-shortened-notes-bibliography%22%2C%22updated%22%3A1769379651%2C%22url%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Fchicago-shortened-notes-bibliography%22%7D%2C%7B%22id%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Felsevier-harvard%22%2C%22updated%22%3A1767625088%2C%22url%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Felsevier-harvard%22%7D%2C%7B%22id%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Famerican-medical-association%22%2C%22updated%22%3A1769378465%2C%22url%22%3A%22http%3A%2F%2Fwww.zotero.org%2Fstyles%2Fa…" (3122 chars) to https://repo.zotero.org/repo/updated?last=1770626896&version=8.0&m=3
+
+(5)(+0000000): CookieSandbox: Not touching channel for repo.zotero.org
+
+(5)(+0000201): CookieSandbox: Not touching channel for repo.zotero.org
+
+(3)(+0000001): HTTP POST https://repo.zotero.org/repo/updated?
+last=1770626896&version=8.0&m=3 succeeded with 200
+
+(4)(+0000000): Beginning DB transaction 6VdHIhVz
+
+(4)(+0000000): REPLACE INTO version (schema,version) VALUES (?,?)
+['repository', 1770628198]
+
+(4)(+0000000): REPLACE INTO version (schema,version) VALUES (?,?)
+['lastcheck', 1770628198]
+
+(4)(+0000006): Committed DB transaction 6VdHIhVz
+
+(3)(+0000000): All translators and styles are up-to-date
+
+(3)(+0000000): Initializing DB backup idle observer
+
+(4)(+0000023): Beginning DB transaction 5nokSXOa
+
+(3)(+0000857): Cached CSL.Engine instance with {"locale":"en-
+US","format":"html","automaticJournalAbbreviations":false} for http://
+www.zotero.org/styles/chicago-shortened-notes-bibliography
+
+(3)(+0000816): Cached CSL.Engine instance with {"locale":"en-
+US","format":"text","automaticJournalAbbreviations":false} for http://
+www.zotero.org/styles/chicago-shortened-notes-bibliography
+
+(3)(+0000000): Preloading 1412e9e2-51e1-42ec-aa35-e036a895534b for Quick
+Copy
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/translators/Note
+Markdown.js
+
+(4)(+0000113): Committed DB transaction 5nokSXOa
+
+(3)(+0000000): Purged data tables in 1786 ms
+
+(3)(+0000001): Preloading 897a81c2-9f60-4bec-ae6b-85a5030b8be5 for Quick
+Copy
+
+(3)(+0000000): Getting contents of /home/milek/Zotero/translators/Note
+HTML.js
+
+(4)(+0000000): SELECT key AS domainPath, value AS format FROM settings
+WHERE setting='quickCopySite'
+
+(3)(+0003213): Scheduling next feed update
+
+(4)(+0000000): SELECT ( CASE WHEN lastCheck IS NULL THEN 0 ELSE
+strftime('%s', lastCheck) + refreshInterval * 60 - strftime('%s', 'now')
+END ) AS nextCheck FROM feeds WHERE refreshInterval IS NOT NULL ORDER BY
+nextCheck ASC LIMIT 1
+
+(3)(+0000000): No feeds with auto-update
+
+(3)(+0008697): SearchReplace: Attempting to add menu item
+
+(3)(+0000000): SearchReplace: Found Edit popup: #menu_EditPopup
+
+(3)(+0000000): SearchReplace: Found Edit popup
+
+(4)(+0000000): SELECT COUNT(*) FROM settings WHERE setting='mImport' AND
+key='cleanup'
+
+(3)(+0011500): Starting full-text content processor
+
+(4)(+0000001): Registering notifier observer 'fulltext_t7' for [sync]
+
+(3)(+0031713): Getting contents of /mnt/d/git/zotero-search-
+replace/.scaffold/profile/treePrefs.json
+
+(3)(+0000003): Writing column prefs of length 4268 to file /mnt/d/git/
+zotero-search-replace/.scaffold/profile/treePrefs.json
+

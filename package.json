@@ -1,0 +1,70 @@
+{
+  "name": "zotero-search-replace",
+  "version": "0.1.0",
+  "description": "Zotero search and replace plugin with regex support and preloaded data quality patterns",
+  "main": "index.js",
+  "scripts": {
+    "start": "zotero-plugin serve",
+    "dev": "zotero-plugin serve",
+    "build": "zotero-plugin build && cp build/addon/content/scripts/zotero-search-replace-bundled.js content/scripts/",
+    "release": "zotero-plugin release",
+    "lint": "eslint . --ext .js,.json",
+    "lint:fix": "eslint . --ext .js,.json --fix",
+    "test": "npm run test:unit && npm run test:zotero",
+    "test:unit": "jest",
+    "test:zotero": "CI=true zotero-plugin test",
+    "test:zotero:watch": "zotero-plugin test",
+    "test:zotero:debug": "xvfb-run -a node tests/zotero-framework/run-zotero-tests.js --debug"
+  },
+  "keywords": [
+    "zotero",
+    "search",
+    "replace",
+    "metadata"
+  ],
+  "author": "Marcin Miłkowski",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milekpl/zotero-search-replace.git"
+  },
+  "bugs": {
+    "url": "https://github.com/milekpl/zotero-search-replace/issues"
+  },
+  "homepage": "https://github.com/milekpl/zotero-search-replace#readme",
+  "devDependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "babel-jest": "^29.0.0",
+    "chai": "^6.2.2",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.36.0",
+    "jest": "^29.0.0",
+    "zotero-plugin": "^8.0.8",
+    "zotero-plugin-scaffold": "^0.8.2"
+  },
+  "zotero-plugin": {
+    "id": "zotero-search-replace@marcinmilkowski.pl",
+    "version": "0.1.0",
+    "zotero": {
+      "strictMinVersion": "7.0",
+      "strictMaxVersion": "8.*"
+    },
+    "test": {
+      "entries": "tests/zotero-framework/test/tests",
+      "mocha": {
+        "timeout": 60000
+      },
+      "headless": false,
+      "watch": false,
+      "startupDelay": 2000,
+      "waitForPlugin": "() => typeof Zotero !== 'undefined' && typeof ZoteroSearchReplace !== 'undefined'"
+    },
+    "testRunner": {
+      "type": "mocha",
+      "env": {
+        "extensions.zotero-search-replace.testMode": true
+      }
+    }
+  }
+}

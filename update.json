@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "zotero-search-replace@marcinmilkowski.pl": {
+      "updates": [
+        {
+          "version": "0.1.0",
+          "update_link": "https://raw.githubusercontent.com/milekpl/zotero-search-replace/main/update.json"
+        }
+      ]
+    }
+  }
+}

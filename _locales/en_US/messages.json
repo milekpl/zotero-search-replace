@@ -1,0 +1,10 @@
+{
+  "name": {
+    "message": "Zotero Search & Replace",
+    "description": "Name of the extension"
+  },
+  "description": {
+    "message": "Advanced search and replace functionality for Zotero library items with regex support and preloaded data quality patterns",
+    "description": "Description of the extension"
+  }
+}

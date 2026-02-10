@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Processing...</title>
+  <style>
+    html, body {
+      font-family: -moz-dialog, Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+      text-align: center;
+    }
+    #status-label { margin-bottom: 12px; }
+    #progress-bar { width: 100%; height: 24px; }
+    #cancel-button { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div id="status-label">Processing...</div>
+  <progress id="progress-bar" value="0" max="100"></progress>
+  <div>
+    <button id="cancel-button">Cancel</button>
+  </div>
+  <script src="progress-dialog.js"></script>
+</body>
+</html>
