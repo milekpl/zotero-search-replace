@@ -18,8 +18,10 @@ if (typeof console === 'undefined') {
     // SQLite LIKE: %pattern%
     SQL_GLOB: "sql_glob",
     // SQLite GLOB: *pattern*
-    EXACT: "exact"
-    // Exact string match
+    EXACT: "exact",
+    // Exact string match (full equality)
+    CONTAINS: "contains"
+    // Substring match (contains anywhere)
   };
   var FIELDS_WITH_CONTAINS = [
     "title",
@@ -31,7 +33,13 @@ if (typeof console === 'undefined') {
     "ISSN",
     "url",
     "callNumber",
-    "extra"
+    "extra",
+    "place",
+    "archiveLocation",
+    "libraryCatalog",
+    "attachmentContent",
+    "annotationText",
+    "annotationComment"
   ];
   var SearchResult = class {
     constructor(item, matchedFields = [], matchDetails = []) {
@@ -76,11 +84,15 @@ if (typeof console === 'undefined') {
     }
     // Build a simpler search term for Phase 1 (Zotero "contains" search)
     // For regex patterns, we try to extract a simple literal substring for initial filtering
+    // Returns null to signal that Phase 1 should be skipped (for empty-field patterns like ^$)
     buildSearchTerm(pattern) {
       if (!pattern || typeof pattern !== "string") {
         return pattern;
       }
       let searchTerm = pattern;
+      if (/^\^?\$?\s*\$?$/.test(pattern) || /^\^\\s*\$/.test(pattern)) {
+        return null;
+      }
       if (searchTerm.startsWith("^")) {
         searchTerm = searchTerm.slice(1);
       }
@@ -104,12 +116,16 @@ if (typeof console === 'undefined') {
     }
     // Add search condition for a field
     addSearchCondition(search, field, pattern) {
+      if (pattern === null) {
+        return;
+      }
       if (field === "tags") {
         search.addCondition("tag", "contains", pattern);
         return;
       }
       if (field.startsWith("creator.")) {
         const term = this.buildSearchTerm(pattern);
+        if (term === null) return;
         search.addCondition("creator", "contains", term);
         return;
       }
@@ -118,6 +134,7 @@ if (typeof console === 'undefined') {
       }
       if (FIELDS_WITH_CONTAINS.includes(field)) {
         const term = this.buildSearchTerm(pattern);
+        if (term === null) return;
         search.addCondition(field, "contains", term);
         return;
       }
@@ -129,6 +146,10 @@ if (typeof console === 'undefined') {
         search.addCondition("collection", "is", pattern);
         return;
       }
+      if (field === "savedSearch") {
+        search.addCondition("savedSearch", "is", pattern);
+        return;
+      }
       if (field === "note" || field === "childNote") {
         search.addCondition("note", "contains", pattern);
         return;
@@ -137,61 +158,186 @@ if (typeof console === 'undefined') {
         search.addCondition(field, "is", pattern);
         return;
       }
+      if (field === "attachmentContent") {
+        search.addCondition("attachmentContent", "contains", pattern);
+        return;
+      }
+      if (field === "attachmentFileType") {
+        search.addCondition("attachmentFileType", "is", pattern);
+        return;
+      }
+      if (field === "annotationText" || field === "annotationComment") {
+        search.addCondition(field, "contains", pattern);
+        return;
+      }
+      const itemTypeFields = [
+        "thesisType",
+        "reportType",
+        "videoRecordingFormat",
+        "audioFileType",
+        "audioRecordingFormat",
+        "letterType",
+        "interviewMedium",
+        "manuscriptType",
+        "presentationType",
+        "mapType",
+        "artworkMedium",
+        "programmingLanguage"
+      ];
+      if (itemTypeFields.includes(field)) {
+        return;
+      }
       console.log("SearchReplace: Skipping unknown field:", field);
     }
     // Main search method - TWO PHASE
-    async search(pattern, options = {}) {
+    // Supports either single pattern (backward compatible) or array of conditions
+    async search(patternOrConditions, options = {}) {
+      let conditions = [];
+      if (Array.isArray(patternOrConditions)) {
+        conditions = patternOrConditions;
+      } else if (typeof patternOrConditions === "string") {
+        const {
+          fields: fields2 = ["title", "abstractNote", "creator.lastName", "creator.firstName", "tags", "url"],
+          patternType = PATTERN_TYPES.REGEX,
+          caseSensitive = false
+        } = options;
+        conditions = [{
+          pattern: patternOrConditions,
+          field: fields2[0] || "title",
+          fields: fields2,
+          patternType,
+          caseSensitive,
+          operator: "AND"
+          // First condition, implicit AND
+        }];
+      }
+      if (conditions.length === 0) {
+        return [];
+      }
       const {
-        fields = ["title", "abstractNote", "creator.lastName", "creator.firstName", "tags", "url"],
-        patternType = PATTERN_TYPES.REGEX,
-        caseSensitive = false,
         libraryID = Zotero.Libraries.userLibraryID,
         progressCallback = () => {
         }
       } = options;
-      this.validatePattern(pattern, patternType);
-      const search = new Zotero.Search();
-      search.libraryID = libraryID;
-      let hasConditions = false;
-      if (fields.length === 1) {
-        this.addSearchCondition(search, fields[0], pattern);
-        hasConditions = true;
-      } else {
-        for (const field of fields) {
-          if (this._canAddCondition(field, pattern)) {
-            this.addSearchCondition(search, field, pattern);
-            hasConditions = true;
-            break;
+      for (const condition of conditions) {
+        this.validatePattern(condition.pattern, condition.patternType || PATTERN_TYPES.REGEX);
+      }
+      const allFields = [...new Set(conditions.map((c) => c.field).filter((f) => f))];
+      const fields = allFields.length > 0 ? allFields : ["title"];
+      const PHASE1_FIELD_THRESHOLD = 5;
+      let skipPhase1 = fields.length > PHASE1_FIELD_THRESHOLD;
+      const hasNotConditions = conditions.some((c) => c.operator === "AND_NOT" || c.operator === "OR_NOT");
+      if (hasNotConditions) {
+        skipPhase1 = true;
+      }
+      let itemIDs = [];
+      if (!skipPhase1) {
+        const search = new Zotero.Search();
+        search.libraryID = libraryID;
+        const phase1Condition = conditions.find(
+          (c) => c.operator !== "AND_NOT" && c.operator !== "OR_NOT" && c.pattern && !c.pattern.includes("|")
+        );
+        if (phase1Condition && this._canAddCondition(phase1Condition.field, phase1Condition.pattern)) {
+          this.addSearchCondition(search, phase1Condition.field, phase1Condition.pattern);
+          itemIDs = await search.search();
+          progressCallback({ phase: "filter", count: itemIDs.length });
+          if (itemIDs.length === 0) {
+            return [];
           }
+        } else {
+          skipPhase1 = true;
         }
       }
-      if (!hasConditions) {
-        console.log("SearchReplace: No searchable fields");
-        return [];
-      }
-      const itemIDs = await search.search();
-      progressCallback({ phase: "filter", count: itemIDs.length });
-      if (itemIDs.length === 0) {
-        return [];
+      if (skipPhase1) {
+        progressCallback({ phase: "filter", count: "fetching all items..." });
+        const search = new Zotero.Search();
+        search.libraryID = libraryID;
+        itemIDs = await search.search();
+        progressCallback({ phase: "filter", count: itemIDs.length });
+        if (itemIDs.length === 0) {
+          return [];
+        }
       }
       const items = await Zotero.Items.getAsync(itemIDs);
       const results = [];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         progressCallback({ phase: "refine", current: i + 1, total: items.length });
-        const { matchedFields, matchDetails } = this.matchItem(item, pattern, {
-          fields,
-          patternType,
-          caseSensitive
-        });
-        if (matchedFields.length > 0) {
+        const { matched, matchedFields, matchDetails } = this.evaluateConditions(item, conditions);
+        if (matched) {
           results.push(new SearchResult(item, matchedFields, matchDetails));
         }
       }
       return results;
     }
+    // Evaluate multiple conditions with AND/OR/NOT logic
+    evaluateConditions(item, conditions) {
+      if (conditions.length === 0) {
+        return { matched: false, matchedFields: [], matchDetails: [] };
+      }
+      if (conditions.length === 1) {
+        const c = conditions[0];
+        const { matchedFields: matchedFields2, matchDetails: matchDetails2 } = this.matchItem(item, c.pattern, {
+          fields: [c.field],
+          patternType: c.patternType || PATTERN_TYPES.REGEX,
+          caseSensitive: c.caseSensitive || false
+        });
+        return { matched: matchedFields2.length > 0, matchedFields: matchedFields2, matchDetails: matchDetails2 };
+      }
+      const results = [];
+      let allMatched = true;
+      let anyMatched = false;
+      let matchedFields = [];
+      let matchDetails = [];
+      for (let i = 0; i < conditions.length; i++) {
+        const c = conditions[i];
+        const { matchedFields: mf, matchDetails: md } = this.matchItem(item, c.pattern, {
+          fields: [c.field],
+          patternType: c.patternType || PATTERN_TYPES.REGEX,
+          caseSensitive: c.caseSensitive || false
+        });
+        const conditionMatched = mf.length > 0;
+        results.push(conditionMatched);
+        if (conditionMatched) {
+          matchedFields = matchedFields.concat(mf);
+          matchDetails = matchDetails.concat(md);
+        }
+        if (!conditionMatched) {
+          allMatched = false;
+        }
+        if (conditionMatched) {
+          anyMatched = true;
+        }
+      }
+      let matched = false;
+      const positiveConditions = conditions.filter((c) => c.operator !== "AND_NOT" && c.operator !== "OR_NOT");
+      const notConditions = conditions.filter((c) => c.operator === "AND_NOT" || c.operator === "OR_NOT");
+      const positiveResults = results.slice(0, positiveConditions.length);
+      const anyPositiveMatched = positiveResults.some((r) => r);
+      let notMatched = false;
+      for (let i = 0; i < notConditions.length; i++) {
+        const notIdx = positiveConditions.length + i;
+        if (results[notIdx]) {
+          notMatched = true;
+          break;
+        }
+      }
+      const firstOp = conditions[0].operator || "AND";
+      const allPositiveMatched = positiveResults.every((r) => r);
+      if (firstOp === "AND") {
+        matched = allPositiveMatched && !notMatched;
+      } else if (firstOp === "OR") {
+        matched = anyPositiveMatched && !notMatched;
+      } else if (firstOp === "AND_NOT") {
+        matched = allMatched && !results[0];
+      } else if (firstOp === "OR_NOT") {
+        matched = (anyMatched || allMatched) && !results[0];
+      }
+      return { matched, matchedFields, matchDetails };
+    }
     // Check if a field can have a condition added (for Phase 1 filtering)
     _canAddCondition(field, pattern) {
+      if (pattern === null) return false;
       if (field === "tags") return true;
       if (field.startsWith("creator.")) return true;
       if (field === "date" || field === "dateAdded" || field === "dateModified") return false;
@@ -204,7 +350,7 @@ if (typeof console === 'undefined') {
     }
     // Match item against pattern
     matchItem(item, pattern, options = {}) {
-      const { fields, patternType, caseSensitive } = options;
+      const { fields, patternType, caseSensitive = false } = options;
       const matchedFields = [];
       const matchDetails = [];
       for (const field of fields) {
@@ -219,11 +365,19 @@ if (typeof console === 'undefined') {
             } else {
               value = creator[creatorField];
             }
+            if (patternType === PATTERN_TYPES.REGEX && pattern === "^$") {
+              if (!value || value === "") {
+                matchedFields.push(field);
+                matchDetails.push({ field, value: "", matchIndex: 0, matchLength: 0 });
+                break;
+              }
+              continue;
+            }
             const { match } = this.testValue(value, pattern, patternType, caseSensitive);
             if (value && match !== null) {
               matchedFields.push(field);
-              const matchLength = patternType === PATTERN_TYPES.EXACT ? String(value).length : match.length || String(value).length;
-              const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX ? patternType === PATTERN_TYPES.EXACT ? 0 : match.index || 0 : 0;
+              const matchLength = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS ? match ? pattern.length : 0 : match.length || String(value).length;
+              const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS ? patternType === PATTERN_TYPES.EXACT ? 0 : match ? value.indexOf(pattern) : 0 : 0;
               matchDetails.push({ field, value, matchIndex, matchLength });
               break;
             }
@@ -244,11 +398,18 @@ if (typeof console === 'undefined') {
           } catch (e) {
             continue;
           }
+          if (patternType === PATTERN_TYPES.REGEX && pattern === "^$") {
+            if (!value || value === "") {
+              matchedFields.push(field);
+              matchDetails.push({ field, value: "", matchIndex: 0, matchLength: 0 });
+              continue;
+            }
+          }
           const { match } = this.testValue(value, pattern, patternType, caseSensitive);
           if (value && match !== null) {
             matchedFields.push(field);
-            const matchLength = patternType === PATTERN_TYPES.EXACT ? String(value).length : match.length || String(value).length;
-            const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX ? patternType === PATTERN_TYPES.EXACT ? 0 : match.index || 0 : 0;
+            const matchLength = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS ? match ? pattern.length : 0 : match.length || String(value).length;
+            const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS ? patternType === PATTERN_TYPES.EXACT ? 0 : match ? value.indexOf(pattern) : 0 : 0;
             matchDetails.push({ field, value, matchIndex, matchLength });
           }
         }
@@ -285,6 +446,9 @@ if (typeof console === 'undefined') {
         case PATTERN_TYPES.EXACT:
           const exactMatch = caseSensitive ? str === pattern ? str : null : str.toLowerCase() === pattern.toLowerCase() ? str : null;
           return { match: exactMatch, regex: null };
+        case PATTERN_TYPES.CONTAINS:
+          const containsMatch = caseSensitive ? str.includes(pattern) ? pattern : null : str.toLowerCase().includes(pattern.toLowerCase()) ? pattern : null;
+          return { match: containsMatch, regex: null };
         default:
           return { match: null, regex: null };
       }
@@ -546,16 +710,6 @@ if (typeof console === 'undefined') {
   var DATA_QUALITY_PATTERNS = [
     // === Parsing Errors ===
     {
-      id: "fix-comma-space",
-      name: "Fix: Space Before Comma",
-      description: 'Fixes "surname , name" \u2192 "surname, name"',
-      fields: ["creator.lastName", "creator.firstName"],
-      patternType: "regex",
-      search: " ,",
-      replace: ",",
-      category: "Parsing Errors"
-    },
-    {
       id: "fix-jr-suffix",
       name: "Fix: Move Jr/Sr Suffix",
       description: 'Moves "Jr" from given name to surname',
@@ -595,6 +749,36 @@ if (typeof console === 'undefined') {
       replace: "",
       category: "Data Quality"
     },
+    {
+      id: "fix-whitespace-colon",
+      name: "Fix: Whitespace Before Colon",
+      description: "Removes whitespace before colons",
+      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
+      patternType: "regex",
+      search: "\\s+:",
+      replace: ":",
+      category: "Parsing Errors"
+    },
+    {
+      id: "fix-whitespace-semicolon",
+      name: "Fix: Whitespace Before Semicolon",
+      description: "Removes whitespace before semicolons",
+      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
+      patternType: "regex",
+      search: "\\s+;",
+      replace: ";",
+      category: "Parsing Errors"
+    },
+    {
+      id: "fix-missing-space-paren",
+      name: "Fix: Missing Space Before (",
+      description: "Adds space before opening parenthesis",
+      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
+      patternType: "regex",
+      search: "([a-z])\\(",
+      replace: "$1 (",
+      category: "Parsing Errors"
+    },
     // === Capitalization ===
     {
       id: "lowercase-van-de",
@@ -617,23 +801,23 @@ if (typeof console === 'undefined') {
       category: "Capitalization"
     },
     {
-      id: "normalize-mc-mac",
-      name: "Normalize: Mc/Mac Prefixes",
-      description: "Fixes MCCULLOCH \u2192 McCulloch, MACDONALD \u2192 MacDonald",
+      id: "normalize-mc",
+      name: "Normalize: Mc Prefix",
+      description: "Fixes MCCULLOCH -> McCulloch and McDonald -> McDonald",
       fields: ["creator.lastName"],
       patternType: "regex",
-      search: "\\bMc([A-Z][a-z]+)",
-      replace: "Mc$1",
+      search: "\\b[Mm][Cc][A-Za-z]*",
+      replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.slice(2).charAt(0).toUpperCase() + m.slice(3).toLowerCase(),
       category: "Capitalization"
     },
     {
       id: "normalize-mac",
       name: "Normalize: Mac Prefix",
-      description: "Fixes MAC\u2192Mac when followed by lowercase letters",
+      description: "Fixes MACDONALD -> MacDonald",
       fields: ["creator.lastName"],
       patternType: "regex",
-      search: "\\bMac([a-z])",
-      replace: (match) => "Mac" + match[3].toUpperCase(),
+      search: "\\b[Mm][Aa][Cc][A-Za-z]*",
+      replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3).charAt(0).toUpperCase() + m.slice(4).toLowerCase(),
       category: "Capitalization"
     },
     // === Diacritics ===
@@ -690,6 +874,36 @@ if (typeof console === 'undefined') {
       replace: "https://",
       category: "Data Quality"
     },
+    {
+      id: "remove-all-urls",
+      name: "Remove: All URLs",
+      description: "Removes all URLs from the URL field",
+      fields: ["url"],
+      patternType: "regex",
+      search: ".+",
+      replace: "",
+      category: "Data Quality"
+    },
+    {
+      id: "remove-google-books-urls",
+      name: "Remove: Google Books URLs",
+      description: "Removes Google Books URLs (books.google.com)",
+      fields: ["url"],
+      patternType: "regex",
+      search: "https?://books\\.google\\.com/[^\\s]*",
+      replace: "",
+      category: "Data Quality"
+    },
+    {
+      id: "remove-worldcat-urls",
+      name: "Remove: WorldCat URLs",
+      description: "Removes WorldCat URLs (www.worldcat.org)",
+      fields: ["url"],
+      patternType: "regex",
+      search: "https?://www\\.worldcat\\.org/[^\\s]*",
+      replace: "",
+      category: "Data Quality"
+    },
     // === Classification ===
     {
       id: "find-corporate-authors",
@@ -697,7 +911,7 @@ if (typeof console === 'undefined') {
       description: "Find likely corporate/group authors in person fields",
       fields: ["creator.lastName"],
       patternType: "regex",
-      search: "(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)$",
+      search: "\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$",
       replace: "",
       category: "Classification"
     },
@@ -743,7 +957,7 @@ if (typeof console === 'undefined') {
       const dialogWindow = mainWindow.openDialog(
         "chrome://zotero-search-replace/content/dialog.html",
         "zotero-search-replace-dialog",
-        "modal,chrome,centerscreen,width=800,height=600",
+        "chrome,centerscreen,resizable=yes,width=800,height=600",
         dialogArgs
       );
       return dialogWindow;

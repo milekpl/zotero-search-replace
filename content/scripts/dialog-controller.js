@@ -30,6 +30,57 @@ var EMBEDDED_PATTERNS = [
 
 var EMBEDDED_CATEGORIES = ['Parsing Errors', 'Capitalization', 'Diacritics', 'Data Quality', 'Classification'];
 
+// Field type definitions - determines what input UI to show
+var FIELD_TYPES = {
+  // Fields with predefined dropdown values (XUL menulist)
+  itemType: {
+    type: 'dropdown',
+    values: [
+      'journalArticle',
+      'book',
+      'bookSection',
+      'conferencePaper',
+      'conferenceProceedings',
+      'report',
+      'thesis',
+      'webpage',
+      'blogPost',
+      'forumPost',
+      'letter',
+      'manuscript',
+      'interview',
+      'radioBroadcast',
+      'tvBroadcast',
+      'podcast',
+      'audioRecording',
+      'videoRecording',
+      'film',
+      'artwork',
+      'photograph',
+      'map',
+      'dataset',
+      'software',
+      'attachment',
+      'note',
+      'annotation'
+    ]
+  },
+  // Date fields - could use date picker in the future
+  date: {
+    type: 'text',
+    placeholder: 'e.g., 2024, 2024-01, 2024-01-15'
+  },
+  dateModified: {
+    type: 'text',
+    placeholder: 'e.g., 2024, 2024-01, 2024-01-15'
+  },
+  // Default to text input
+  default: {
+    type: 'text',
+    placeholder: 'Pattern...'
+  }
+};
+
 // Get SearchEngine and ReplaceEngine from the bundled script (loaded in dialog.html)
 function getSearchEngine() {
   // Try from ZoteroSearchReplace namespace (primary path - bundled script exports here)
@@ -282,6 +333,8 @@ var ZoteroSearchDialog = {
         this.state.conditions[index].field = e.target.value;
         // Update replace field options when field changes
         this.updateReplaceFieldOptions();
+        // Re-render to show appropriate input type for the field
+        this.renderConditions();
       });
 
       // Pattern Type dropdown
@@ -298,15 +351,112 @@ var ZoteroSearchDialog = {
         this.state.conditions[index].patternType = e.target.value;
       });
 
-      // Pattern input
+      // Pattern input container - will hold different input types based on field
+      const patternContainer = document.createElement('div');
+      patternContainer.className = 'condition-pattern-container';
+
+      // Get the field type info
+      const fieldTypeInfo = this.getFieldTypeInfo(condition.field);
+      const isDropdown = fieldTypeInfo.type === 'dropdown';
+
+      // Create text input (default)
       const patternInput = document.createElement('input');
       patternInput.type = 'text';
       patternInput.className = 'condition-pattern';
-      patternInput.placeholder = 'Pattern...';
+      patternInput.placeholder = fieldTypeInfo.placeholder || 'Pattern...';
       patternInput.value = condition.pattern || '';
+      patternInput.style.display = isDropdown ? 'none' : 'block';
       patternInput.addEventListener('input', (e) => {
         this.state.conditions[index].pattern = e.target.value;
       });
+
+      // Create XUL menulist for dropdown fields (like itemType)
+      const xulWrapper = document.createElement('div');
+      xulWrapper.className = 'xul-menulist-wrapper';
+      xulWrapper.style.display = isDropdown ? 'block' : 'none';
+
+      // Try to create XUL menulist
+      let xulMenulist = null;
+      try {
+        if (document.createXULElement) {
+          xulMenulist = document.createXULElement('menulist');
+          xulMenulist.setAttribute('flex', '1');
+          xulMenulist.setAttribute('minwidth', '150px');
+
+          // Create menupopup and menuitems
+          const menupopup = document.createXULElement('menupopup');
+
+          // Add "Any" option for searching
+          const anyOption = document.createXULElement('menuitem');
+          anyOption.setAttribute('label', '-- Any --');
+          anyOption.setAttribute('value', '');
+          menupopup.appendChild(anyOption);
+
+          // Add item type options
+          if (fieldTypeInfo.values) {
+            fieldTypeInfo.values.forEach(val => {
+              const menuitem = document.createXULElement('menuitem');
+              menuitem.setAttribute('label', val);
+              menuitem.setAttribute('value', val);
+              menupopup.appendChild(menuitem);
+            });
+          }
+
+          xulMenulist.appendChild(menupopup);
+
+          // Set selected value
+          if (condition.pattern) {
+            xulMenulist.value = condition.pattern;
+          }
+
+          xulMenulist.addEventListener('change', (e) => {
+            this.state.conditions[index].pattern = e.target.value;
+          });
+
+          xulWrapper.appendChild(xulMenulist);
+        }
+      } catch (e) {
+        SRdebug('Could not create XUL menulist: ' + e.message);
+      }
+
+      // Fallback to HTML select if XUL fails
+      if (!xulMenulist) {
+        const htmlSelect = document.createElement('select');
+        htmlSelect.className = 'condition-pattern';
+        htmlSelect.style.width = '100%';
+        htmlSelect.style.display = isDropdown ? 'block' : 'none';
+
+        // Add "Any" option
+        const anyOption = document.createElement('option');
+        anyOption.value = '';
+        anyOption.textContent = '-- Any --';
+        htmlSelect.appendChild(anyOption);
+
+        // Add options
+        if (fieldTypeInfo.values) {
+          fieldTypeInfo.values.forEach(val => {
+            const option = document.createElement('option');
+            option.value = val;
+            option.textContent = val;
+            htmlSelect.appendChild(option);
+          });
+        }
+
+        if (condition.pattern) {
+          htmlSelect.value = condition.pattern;
+        }
+
+        htmlSelect.addEventListener('change', (e) => {
+          this.state.conditions[index].pattern = e.target.value;
+        });
+
+        // Replace XUL wrapper with HTML select
+        xulWrapper.innerHTML = '';
+        xulWrapper.appendChild(htmlSelect);
+      }
+
+      patternContainer.appendChild(patternInput);
+      patternContainer.appendChild(xulWrapper);
 
       // Case sensitive checkbox
       const caseSensitiveLabel = document.createElement('label');
@@ -334,7 +484,7 @@ var ZoteroSearchDialog = {
       row.appendChild(operatorSelect);
       row.appendChild(fieldSelect);
       row.appendChild(patternTypeSelect);
-      row.appendChild(patternInput);
+      row.appendChild(patternContainer);
       row.appendChild(caseSensitiveLabel);
       row.appendChild(removeBtn);
       container.appendChild(row);
@@ -352,36 +502,45 @@ var ZoteroSearchDialog = {
   getAllFields: function() {
     return [
       // Core fields
-      { value: 'title', label: 'Title' },
-      { value: 'abstractNote', label: 'Abstract' },
-      { value: 'date', label: 'Date' },
-      { value: 'dateModified', label: 'Date Modified' },
+      { value: 'title', label: 'Title', fieldType: 'text' },
+      { value: 'abstractNote', label: 'Abstract', fieldType: 'text' },
+      { value: 'date', label: 'Date', fieldType: 'date' },
+      { value: 'dateModified', label: 'Date Modified', fieldType: 'date' },
       // Creators
-      { value: 'creator.lastName', label: 'Creator (Last)' },
-      { value: 'creator.firstName', label: 'Creator (First)' },
-      { value: 'creator.fullName', label: 'Creator (Full)' },
+      { value: 'creator.lastName', label: 'Creator (Last)', fieldType: 'text' },
+      { value: 'creator.firstName', label: 'Creator (First)', fieldType: 'text' },
+      { value: 'creator.fullName', label: 'Creator (Full)', fieldType: 'text' },
       // Publication
-      { value: 'publicationTitle', label: 'Publication' },
-      { value: 'publisher', label: 'Publisher' },
-      { value: 'volume', label: 'Volume' },
-      { value: 'issue', label: 'Issue' },
-      { value: 'pages', label: 'Pages' },
+      { value: 'publicationTitle', label: 'Publication', fieldType: 'text' },
+      { value: 'publisher', label: 'Publisher', fieldType: 'text' },
+      { value: 'volume', label: 'Volume', fieldType: 'text' },
+      { value: 'issue', label: 'Issue', fieldType: 'text' },
+      { value: 'pages', label: 'Pages', fieldType: 'text' },
       // Identifiers
-      { value: 'DOI', label: 'DOI' },
-      { value: 'ISBN', label: 'ISBN' },
-      { value: 'ISSN', label: 'ISSN' },
-      { value: 'url', label: 'URL' },
-      { value: 'callNumber', label: 'Call Number' },
+      { value: 'DOI', label: 'DOI', fieldType: 'text' },
+      { value: 'ISBN', label: 'ISBN', fieldType: 'text' },
+      { value: 'ISSN', label: 'ISSN', fieldType: 'text' },
+      { value: 'url', label: 'URL', fieldType: 'text' },
+      { value: 'callNumber', label: 'Call Number', fieldType: 'text' },
       // Other
-      { value: 'extra', label: 'Extra' },
-      { value: 'itemType', label: 'Item Type' },
-      { value: 'tags', label: 'Tags' },
-      { value: 'note', label: 'Note' },
+      { value: 'extra', label: 'Extra', fieldType: 'text' },
+      { value: 'itemType', label: 'Item Type', fieldType: 'dropdown' },
+      { value: 'tags', label: 'Tags', fieldType: 'text' },
+      { value: 'note', label: 'Note', fieldType: 'text' },
       // Location (Books)
-      { value: 'place', label: 'Place' },
-      { value: 'archiveLocation', label: 'Archive Location' },
-      { value: 'libraryCatalog', label: 'Library Catalog' }
+      { value: 'place', label: 'Place', fieldType: 'text' },
+      { value: 'archiveLocation', label: 'Archive Location', fieldType: 'text' },
+      { value: 'libraryCatalog', label: 'Library Catalog', fieldType: 'text' }
     ];
+  },
+
+  // Get field type info for a given field
+  getFieldTypeInfo: function(fieldValue) {
+    const fieldDef = FIELD_TYPES[fieldValue];
+    if (fieldDef) {
+      return fieldDef;
+    }
+    return FIELD_TYPES.default;
   },
 
   // Update the Replace In dropdown based on current conditions

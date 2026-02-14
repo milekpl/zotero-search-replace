@@ -8,7 +8,8 @@ export const PATTERN_TYPES = {
   REGEX: 'regex',       // JavaScript regex: /pattern/flags
   SQL_LIKE: 'sql_like', // SQLite LIKE: %pattern%
   SQL_GLOB: 'sql_glob', // SQLite GLOB: *pattern*
-  EXACT: 'exact'        // Exact string match
+  EXACT: 'exact',      // Exact string match (full equality)
+  CONTAINS: 'contains'  // Substring match (contains anywhere)
 };
 
 // All searchable fields matching Zotero's Advanced Search
@@ -60,6 +61,11 @@ export const SEARCH_FIELDS = {
   ANNOTATION_TEXT: 'annotationText',
   ANNOTATION_COMMENT: 'annotationComment',
 
+  // Location fields (Books)
+  PLACE: 'place',
+  ARCHIVE_LOCATION: 'archiveLocation',
+  LIBRARY_CATALOG: 'libraryCatalog',
+
   // Item-type specific
   THESIS_TYPE: 'thesisType',
   REPORT_TYPE: 'reportType',
@@ -109,6 +115,9 @@ export const SEARCH_FIELD_NAMES = {
   'attachmentFileType': 'Attachment File Type',
   'annotationText': 'Annotation Text',
   'annotationComment': 'Annotation Comment',
+  'place': 'Place (Books)',
+  'archiveLocation': 'Archive/Location',
+  'libraryCatalog': 'Library Catalog',
   'thesisType': 'Thesis Type',
   'reportType': 'Report Type',
   'videoRecordingFormat': 'Video Recording Format',
@@ -127,7 +136,9 @@ export const SEARCH_FIELD_NAMES = {
 // Fields that support 'contains' operator in Zotero.Search
 const FIELDS_WITH_CONTAINS = [
   'title', 'abstractNote', 'publicationTitle', 'publisher',
-  'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra'
+  'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra',
+  'place', 'archiveLocation', 'libraryCatalog',
+  'attachmentContent', 'annotationText', 'annotationComment'
 ];
 
 // Search result structure
@@ -186,12 +197,20 @@ class SearchEngine {
 
   // Build a simpler search term for Phase 1 (Zotero "contains" search)
   // For regex patterns, we try to extract a simple literal substring for initial filtering
+  // Returns null to signal that Phase 1 should be skipped (for empty-field patterns like ^$)
   buildSearchTerm(pattern) {
     if (!pattern || typeof pattern !== 'string') {
       return pattern;
     }
 
     let searchTerm = pattern;
+
+    // Check for empty-field patterns - these need special handling
+    // ^$ matches empty strings, ^\s*$ matches empty or whitespace-only strings
+    if (/^\^?\$?\s*\$?$/.test(pattern) || /^\^\\s*\$/.test(pattern)) {
+      // This is an empty-field pattern - we can't search for this in Phase 1
+      return null;
+    }
 
     // Handle anchors - Zotero's search doesn't understand ^ or $ as regex anchors
     if (searchTerm.startsWith('^')) {
@@ -228,6 +247,11 @@ class SearchEngine {
 
   // Add search condition for a field
   addSearchCondition(search, field, pattern) {
+    // Empty-field pattern (^$) - skip Phase 1, use Phase 2 only
+    if (pattern === null) {
+      return;
+    }
+
     // Tags: use 'tag' condition
     if (field === 'tags') {
       search.addCondition('tag', 'contains', pattern);
@@ -237,6 +261,8 @@ class SearchEngine {
     // Creator fields
     if (field.startsWith('creator.')) {
       const term = this.buildSearchTerm(pattern);
+      // If term is null, skip this field in Phase 1
+      if (term === null) return;
       search.addCondition('creator', 'contains', term);
       return;
     }
@@ -251,6 +277,8 @@ class SearchEngine {
     // Fields that support 'contains'
     if (FIELDS_WITH_CONTAINS.includes(field)) {
       const term = this.buildSearchTerm(pattern);
+      // If term is null, skip this field in Phase 1
+      if (term === null) return;
       search.addCondition(field, 'contains', term);
       return;
     }
@@ -267,6 +295,12 @@ class SearchEngine {
       return;
     }
 
+    // Saved Search
+    if (field === 'savedSearch') {
+      search.addCondition('savedSearch', 'is', pattern);
+      return;
+    }
+
     // Note fields
     if (field === 'note' || field === 'childNote') {
       search.addCondition('note', 'contains', pattern);
@@ -279,62 +313,136 @@ class SearchEngine {
       return;
     }
 
+    // Attachment fields
+    if (field === 'attachmentContent') {
+      search.addCondition('attachmentContent', 'contains', pattern);
+      return;
+    }
+    if (field === 'attachmentFileType') {
+      search.addCondition('attachmentFileType', 'is', pattern);
+      return;
+    }
+
+    // Annotation fields
+    if (field === 'annotationText' || field === 'annotationComment') {
+      search.addCondition(field, 'contains', pattern);
+      return;
+    }
+
+    // Item-type specific fields - skip Phase 1, rely on Phase 2
+    const itemTypeFields = [
+      'thesisType', 'reportType', 'videoRecordingFormat',
+      'audioFileType', 'audioRecordingFormat', 'letterType',
+      'interviewMedium', 'manuscriptType', 'presentationType',
+      'mapType', 'artworkMedium', 'programmingLanguage'
+    ];
+    if (itemTypeFields.includes(field)) {
+      // Skip in Phase 1 - these fields need Phase 2 regex matching
+      return;
+    }
+
     // Unknown field - skip
     console.log('SearchReplace: Skipping unknown field:', field);
   }
 
   // Main search method - TWO PHASE
-  async search(pattern, options = {}) {
+  // Supports either single pattern (backward compatible) or array of conditions
+  async search(patternOrConditions, options = {}) {
+    // Handle both old API (pattern as first arg) and new API (conditions array)
+    let conditions = [];
+    if (Array.isArray(patternOrConditions)) {
+      // New API: conditions array
+      conditions = patternOrConditions;
+    } else if (typeof patternOrConditions === 'string') {
+      // Old API: single pattern, convert to conditions format
+      const {
+        fields = ['title', 'abstractNote', 'creator.lastName', 'creator.firstName', 'tags', 'url'],
+        patternType = PATTERN_TYPES.REGEX,
+        caseSensitive = false
+      } = options;
+      conditions = [{
+        pattern: patternOrConditions,
+        field: fields[0] || 'title',
+        fields,
+        patternType,
+        caseSensitive,
+        operator: 'AND' // First condition, implicit AND
+      }];
+    }
+
+    if (conditions.length === 0) {
+      return [];
+    }
+
     const {
-      fields = ['title', 'abstractNote', 'creator.lastName', 'creator.firstName', 'tags', 'url'],
-      patternType = PATTERN_TYPES.REGEX,
-      caseSensitive = false,
       libraryID = Zotero.Libraries.userLibraryID,
       progressCallback = () => { }
     } = options;
 
-    // Validate
-    this.validatePattern(pattern, patternType);
+    // Validate all conditions
+    for (const condition of conditions) {
+      this.validatePattern(condition.pattern, condition.patternType || PATTERN_TYPES.REGEX);
+    }
 
-    // Phase 1: Use Zotero.Search for initial filter
-    const search = new Zotero.Search();
-    search.libraryID = libraryID;
+    // Get all unique fields from conditions (for backward compat)
+    const allFields = [...new Set(conditions.map(c => c.field).filter(f => f))];
+    const fields = allFields.length > 0 ? allFields : ['title'];
 
-    // Add search conditions for each field with OR logic
-    // When searching multiple fields, use OR so items match in ANY field (not ALL)
-    let hasConditions = false;
-    if (fields.length === 1) {
-      // Single field - use normal AND logic (with just one condition)
-      this.addSearchCondition(search, fields[0], pattern);
-      hasConditions = true;
-    } else {
-      // Multiple fields - use first valid field for Phase 1 filtering
-      // This avoids ANDing multiple fields which would be too restrictive
-      // Phase 2 will do the actual multi-field matching
-      for (const field of fields) {
-        // Try to add condition for this field, skip if not applicable
-        if (this._canAddCondition(field, pattern)) {
-          this.addSearchCondition(search, field, pattern);
-          hasConditions = true;
-          break; // Only use ONE field for Phase 1, Phase 2 handles the rest
+    // When searching many fields (All Fields), skip Phase 1 and get all items
+    const PHASE1_FIELD_THRESHOLD = 5;
+    let skipPhase1 = fields.length > PHASE1_FIELD_THRESHOLD;
+
+    // Skip Phase 1 if we have NOT conditions (they need full evaluation)
+    const hasNotConditions = conditions.some(c => c.operator === 'AND_NOT' || c.operator === 'OR_NOT');
+    if (hasNotConditions) {
+      skipPhase1 = true;
+    }
+
+    let itemIDs = [];
+    if (!skipPhase1) {
+      // Phase 1: Use Zotero.Search for initial filter
+      const search = new Zotero.Search();
+      search.libraryID = libraryID;
+
+      // Single field or few fields - use Phase 1 filtering
+      // Use only the first positive condition (no NOT) for Phase 1
+      const phase1Condition = conditions.find(c =>
+        c.operator !== 'AND_NOT' &&
+        c.operator !== 'OR_NOT' &&
+        c.pattern &&
+        !c.pattern.includes('|')
+      );
+
+      if (phase1Condition && this._canAddCondition(phase1Condition.field, phase1Condition.pattern)) {
+        this.addSearchCondition(search, phase1Condition.field, phase1Condition.pattern);
+        itemIDs = await search.search();
+        progressCallback({ phase: 'filter', count: itemIDs.length });
+
+        if (itemIDs.length === 0) {
+          return [];
         }
+      } else {
+        // Fallback: get all items
+        skipPhase1 = true;
       }
     }
 
-    // If no valid conditions, return empty
-    if (!hasConditions) {
-      console.log('SearchReplace: No searchable fields');
-      return [];
+    if (skipPhase1) {
+      // Phase 1 skipped - get all items from library for Phase 2 filtering
+      // This is slower but necessary for correct multi-field OR matching
+      progressCallback({ phase: 'filter', count: 'fetching all items...' });
+      const search = new Zotero.Search();
+      search.libraryID = libraryID;
+      // Get all items (no conditions)
+      itemIDs = await search.search();
+      progressCallback({ phase: 'filter', count: itemIDs.length });
+
+      if (itemIDs.length === 0) {
+        return [];
+      }
     }
 
-    const itemIDs = await search.search();
-    progressCallback({ phase: 'filter', count: itemIDs.length });
-
-    if (itemIDs.length === 0) {
-      return [];
-    }
-
-    // Phase 2: Load items and apply regex refinement
+    // Phase 2: Load items and apply regex refinement with AND/OR/NOT evaluation
     const items = await Zotero.Items.getAsync(itemIDs);
     const results = [];
 
@@ -342,13 +450,9 @@ class SearchEngine {
       const item = items[i];
       progressCallback({ phase: 'refine', current: i + 1, total: items.length });
 
-      const { matchedFields, matchDetails } = this.matchItem(item, pattern, {
-        fields,
-        patternType,
-        caseSensitive
-      });
+      const { matched, matchedFields, matchDetails } = this.evaluateConditions(item, conditions);
 
-      if (matchedFields.length > 0) {
+      if (matched) {
         results.push(new SearchResult(item, matchedFields, matchDetails));
       }
     }
@@ -356,8 +460,100 @@ class SearchEngine {
     return results;
   }
 
+  // Evaluate multiple conditions with AND/OR/NOT logic
+  evaluateConditions(item, conditions) {
+    if (conditions.length === 0) {
+      return { matched: false, matchedFields: [], matchDetails: [] };
+    }
+
+    // For single condition, just use matchItem
+    if (conditions.length === 1) {
+      const c = conditions[0];
+      const { matchedFields, matchDetails } = this.matchItem(item, c.pattern, {
+        fields: [c.field],
+        patternType: c.patternType || PATTERN_TYPES.REGEX,
+        caseSensitive: c.caseSensitive || false
+      });
+      return { matched: matchedFields.length > 0, matchedFields, matchDetails };
+    }
+
+    // Multiple conditions - evaluate with AND/OR/NOT
+    const results = [];
+    let allMatched = true; // For AND logic
+    let anyMatched = false; // For OR logic
+    let matchedFields = [];
+    let matchDetails = [];
+
+    for (let i = 0; i < conditions.length; i++) {
+      const c = conditions[i];
+      const { matchedFields: mf, matchDetails: md } = this.matchItem(item, c.pattern, {
+        fields: [c.field],
+        patternType: c.patternType || PATTERN_TYPES.REGEX,
+        caseSensitive: c.caseSensitive || false
+      });
+
+      const conditionMatched = mf.length > 0;
+      results.push(conditionMatched);
+
+      if (conditionMatched) {
+        matchedFields = matchedFields.concat(mf);
+        matchDetails = matchDetails.concat(md);
+      }
+
+      // Update AND/OR trackers
+      if (!conditionMatched) {
+        allMatched = false;
+      }
+      if (conditionMatched) {
+        anyMatched = true;
+      }
+    }
+
+    // Apply operator logic
+    let matched = false;
+    const positiveConditions = conditions.filter(c => c.operator !== 'AND_NOT' && c.operator !== 'OR_NOT');
+    const notConditions = conditions.filter(c => c.operator === 'AND_NOT' || c.operator === 'OR_NOT');
+
+    // First, check if positive conditions match
+    const positiveResults = results.slice(0, positiveConditions.length);
+    const anyPositiveMatched = positiveResults.some(r => r);
+
+    // Now handle NOT conditions
+    let notMatched = false;
+    for (let i = 0; i < notConditions.length; i++) {
+      const notIdx = positiveConditions.length + i;
+      if (results[notIdx]) {
+        notMatched = true;
+        break;
+      }
+    }
+
+    // Determine final match based on first condition's operator
+    const firstOp = conditions[0].operator || 'AND';
+    const allPositiveMatched = positiveResults.every(r => r);
+
+    if (firstOp === 'AND') {
+      // ALL positive must match, and none of the NOT conditions should match
+      matched = allPositiveMatched && !notMatched;
+    } else if (firstOp === 'OR') {
+      // At least one positive must match, and none of the NOT conditions should match
+      matched = anyPositiveMatched && !notMatched;
+    } else if (firstOp === 'AND_NOT') {
+      // All positive must match, this specific one must NOT match
+      matched = allMatched && !results[0];
+    } else if (firstOp === 'OR_NOT') {
+      // At least one positive must match (including this), but NOT this one
+      matched = (anyMatched || allMatched) && !results[0];
+    }
+
+    return { matched, matchedFields, matchDetails };
+  }
+
   // Check if a field can have a condition added (for Phase 1 filtering)
   _canAddCondition(field, pattern) {
+    // Empty-field pattern (^$) - skip Phase 1, use Phase 2 only
+    if (pattern === null) return false;
+
     // Tags: supports 'contains'
     if (field === 'tags') return true;
 
@@ -387,7 +583,7 @@ class SearchEngine {
 
   // Match item against pattern
   matchItem(item, pattern, options = {}) {
-    const { fields, patternType, caseSensitive } = options;
+    const { fields, patternType, caseSensitive = false } = options;
     const matchedFields = [];
     const matchDetails = [];
 
@@ -407,16 +603,26 @@ class SearchEngine {
             value = creator[creatorField];
           }
 
+          // For regex mode with ^$ pattern, match against empty string
+          if (patternType === PATTERN_TYPES.REGEX && pattern === '^$') {
+            if (!value || value === '') {
+              matchedFields.push(field);
+              matchDetails.push({ field, value: '', matchIndex: 0, matchLength: 0 });
+              break; // Found match, move to next field
+            }
+            continue; // Skip to next creator if value is not empty
+          }
+
           const { match } = this.testValue(value, pattern, patternType, caseSensitive);
           if (value && match !== null) {
             matchedFields.push(field);
             // For exact match (string returned as match), use full length
             // For regex match (array returned), use match[0].length
-            const matchLength = (patternType === PATTERN_TYPES.EXACT)
-              ? String(value).length
+            const matchLength = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS)
+              ? (match ? pattern.length : 0)
               : (match.length || String(value).length);
-            const matchIndex = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX)
-              ? (patternType === PATTERN_TYPES.EXACT ? 0 : (match.index || 0))
+            const matchIndex = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS)
+              ? (patternType === PATTERN_TYPES.EXACT ? 0 : (match ? value.indexOf(pattern) : 0))
               : 0;
             matchDetails.push({ field, value, matchIndex, matchLength });
             break; // Found match, move to next field
@@ -439,16 +645,26 @@ class SearchEngine {
         } catch (e) {
           continue;
         }
+
+        // For regex mode with ^$ pattern, match against empty string
+        if (patternType === PATTERN_TYPES.REGEX && pattern === '^$') {
+          if (!value || value === '') {
+            matchedFields.push(field);
+            matchDetails.push({ field, value: '', matchIndex: 0, matchLength: 0 });
+            continue;
+          }
+        }
+
         const { match } = this.testValue(value, pattern, patternType, caseSensitive);
         if (value && match !== null) {
           matchedFields.push(field);
-          // For exact match (string returned as match), use full length
+          // For exact/contains match (string returned as match), use pattern length
           // For regex match (array returned), use match[0].length
-          const matchLength = (patternType === PATTERN_TYPES.EXACT)
-            ? String(value).length
+          const matchLength = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS)
+            ? (match ? pattern.length : 0)
             : (match.length || String(value).length);
-          const matchIndex = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX)
-            ? (patternType === PATTERN_TYPES.EXACT ? 0 : (match.index || 0))
+          const matchIndex = (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS)
+            ? (patternType === PATTERN_TYPES.EXACT ? 0 : (match ? value.indexOf(pattern) : 0))
             : 0;
           matchDetails.push({ field, value, matchIndex, matchLength });
         }
@@ -488,10 +704,18 @@ class SearchEngine {
         return { match: globRegex.exec(str), regex: globRegex };
 
       case PATTERN_TYPES.EXACT:
+        // Exact match = full string equality
         const exactMatch = caseSensitive
           ? (str === pattern ? str : null)
           : (str.toLowerCase() === pattern.toLowerCase() ? str : null);
         return { match: exactMatch, regex: null };
+
+      case PATTERN_TYPES.CONTAINS:
+        // Contains = substring match anywhere in the string
+        const containsMatch = caseSensitive
+          ? (str.includes(pattern) ? pattern : null)
+          : (str.toLowerCase().includes(pattern.toLowerCase()) ? pattern : null);
+        return { match: containsMatch, regex: null };
 
       default:
         return { match: null, regex: null };

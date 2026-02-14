@@ -14,16 +14,6 @@ export const PATTERN_CATEGORIES = [
 export const DATA_QUALITY_PATTERNS = [
   // === Parsing Errors ===
   {
-    id: 'fix-comma-space',
-    name: 'Fix: Space Before Comma',
-    description: 'Fixes "surname , name" → "surname, name"',
-    fields: ['creator.lastName', 'creator.firstName'],
-    patternType: 'regex',
-    search: ' ,',
-    replace: ',',
-    category: 'Parsing Errors'
-  },
-  {
     id: 'fix-jr-suffix',
     name: 'Fix: Move Jr/Sr Suffix',
     description: 'Moves "Jr" from given name to surname',
@@ -63,6 +53,36 @@ export const DATA_QUALITY_PATTERNS = [
     replace: '',
     category: 'Data Quality'
   },
+  {
+    id: 'fix-whitespace-colon',
+    name: 'Fix: Whitespace Before Colon',
+    description: 'Removes whitespace before colons',
+    fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'],
+    patternType: 'regex',
+    search: '\\s+:',
+    replace: ':',
+    category: 'Parsing Errors'
+  },
+  {
+    id: 'fix-whitespace-semicolon',
+    name: 'Fix: Whitespace Before Semicolon',
+    description: 'Removes whitespace before semicolons',
+    fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'],
+    patternType: 'regex',
+    search: '\\s+;',
+    replace: ';',
+    category: 'Parsing Errors'
+  },
+  {
+    id: 'fix-missing-space-paren',
+    name: 'Fix: Missing Space Before (',
+    description: 'Adds space before opening parenthesis',
+    fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'],
+    patternType: 'regex',
+    search: '([a-z])\\(',
+    replace: '$1 (',
+    category: 'Parsing Errors'
+  },
 
   // === Capitalization ===
   {
@@ -86,23 +106,23 @@ export const DATA_QUALITY_PATTERNS = [
     category: 'Capitalization'
   },
   {
-    id: 'normalize-mc-mac',
-    name: 'Normalize: Mc/Mac Prefixes',
-    description: 'Fixes MCCULLOCH → McCulloch, MACDONALD → MacDonald',
+    id: 'normalize-mc',
+    name: 'Normalize: Mc Prefix',
+    description: 'Fixes MCCULLOCH -> McCulloch and McDonald -> McDonald',
     fields: ['creator.lastName'],
     patternType: 'regex',
-    search: '\\bMc([A-Z][a-z]+)',
-    replace: 'Mc$1',
+    search: '\\b[Mm][Cc][A-Za-z]*',
+    replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.slice(2).charAt(0).toUpperCase() + m.slice(3).toLowerCase(),
     category: 'Capitalization'
   },
   {
     id: 'normalize-mac',
     name: 'Normalize: Mac Prefix',
-    description: 'Fixes MAC→Mac when followed by lowercase letters',
+    description: 'Fixes MACDONALD -> MacDonald',
     fields: ['creator.lastName'],
     patternType: 'regex',
-    search: '\\bMac([a-z])',
-    replace: (match) => 'Mac' + match[3].toUpperCase(),
+    search: '\\b[Mm][Aa][Cc][A-Za-z]*',
+    replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3).charAt(0).toUpperCase() + m.slice(4).toLowerCase(),
     category: 'Capitalization'
   },
 
@@ -161,6 +181,36 @@ export const DATA_QUALITY_PATTERNS = [
     replace: 'https://',
     category: 'Data Quality'
   },
+  {
+    id: 'remove-all-urls',
+    name: 'Remove: All URLs',
+    description: 'Removes all URLs from the URL field',
+    fields: ['url'],
+    patternType: 'regex',
+    search: '.+',
+    replace: '',
+    category: 'Data Quality'
+  },
+  {
+    id: 'remove-google-books-urls',
+    name: 'Remove: Google Books URLs',
+    description: 'Removes Google Books URLs (books.google.com)',
+    fields: ['url'],
+    patternType: 'regex',
+    search: 'https?://books\\.google\\.com/[^\\s]*',
+    replace: '',
+    category: 'Data Quality'
+  },
+  {
+    id: 'remove-worldcat-urls',
+    name: 'Remove: WorldCat URLs',
+    description: 'Removes WorldCat URLs (www.worldcat.org)',
+    fields: ['url'],
+    patternType: 'regex',
+    search: 'https?://www\\.worldcat\\.org/[^\\s]*',
+    replace: '',
+    category: 'Data Quality'
+  },
 
   // === Classification ===
   {
@@ -169,7 +219,7 @@ export const DATA_QUALITY_PATTERNS = [
     description: 'Find likely corporate/group authors in person fields',
     fields: ['creator.lastName'],
     patternType: 'regex',
-    search: '(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)$',
+    search: '\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$',
     replace: '',
     category: 'Classification'
   },

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 <head>
   <title>Search &amp; Replace</title>
   <link rel="stylesheet" href="chrome://global/skin/global.css" />
   <link rel="stylesheet" href="chrome://zotero/skin/zotero.css" />
   <link rel="stylesheet" href="chrome://zotero/skin/overlay.css" />
+  <!-- XUL namespace for native dropdowns -->
+  <xul:bindings xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" />
   <style>
     html, body {
       font-family: -moz-dialog, system-ui, -apple-system, sans-serif;
@@ -206,9 +208,7 @@
     }
 
     .result-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: block;
       padding: 10px 12px;
       margin: 2px 6px;
       border-radius: 3px;
@@ -415,95 +415,182 @@
       display: flex;
       gap: 8px;
     }
+
+    /* XUL menulist styles for native dropdowns */
+    .xul-dropdown-container {
+      display: none;
+      flex: 2 1 200px;
+      min-width: 150px;
+    }
+
+    .xul-dropdown-container.visible {
+      display: block;
+    }
+
+    .xul-dropdown-container xul|menulist {
+      width: 100%;
+      min-width: 150px;
+    }
+
+    /* Container for the pattern input area - switches between text and dropdown */
+    .condition-pattern-container {
+      flex: 2 1 200px;
+      min-width: 150px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .condition-pattern-container input[type="text"] {
+      flex: 1;
+      min-width: 100px;
+    }
+
+    .condition-pattern-container .xul-menulist-wrapper {
+      display: none;
+      flex: 1;
+    }
+
+    .condition-pattern-container.has-xul-dropdown input[type="text"] {
+      display: none;
+    }
+
+    .condition-pattern-container.has-xul-dropdown .xul-menulist-wrapper {
+      display: block;
+    }
+
+    /* Date input styling */
+    input[type="date"] {
+      flex: 1;
+      height: 32px;
+      padding: 0 12px;
+      border: 1px solid #a0a0a0;
+      border-radius: 3px;
+      -moz-border-radius: 3px;
+      font-size: 14px;
+      background: white;
+    }
+
+    input[type="date"]:focus {
+      border-color: #cc2936;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(204, 41, 54, 0.2);
+    }
   </style>
 </head>
 <body>
   <h1>Search &amp; Replace</h1>
 
-  <div class="control-row">
-    <div class="control-group">
-      <label for="search-field">Search In</label>
-      <select id="search-field">
-        <option value="all">All Fields</option>
-        <optgroup label="Core Fields">
-          <option value="title">Title</option>
-          <option value="abstractNote">Abstract</option>
-          <option value="date">Date</option>
-          <option value="dateModified">Date Modified</option>
-        </optgroup>
-        <optgroup label="Creators">
-          <option value="creator.lastName">Creator (Last Name)</option>
-          <option value="creator.firstName">Creator (First Name)</option>
-          <option value="creator.fullName">Creator (Full Name)</option>
-        </optgroup>
-        <optgroup label="Publication">
-          <option value="publicationTitle">Publication Title</option>
-          <option value="publisher">Publisher</option>
-          <option value="volume">Volume</option>
-          <option value="issue">Issue</option>
-          <option value="pages">Pages</option>
-        </optgroup>
-        <optgroup label="Identifiers">
-          <option value="DOI">DOI</option>
-          <option value="ISBN">ISBN</option>
-          <option value="ISSN">ISSN</option>
-          <option value="url">URL</option>
-        </optgroup>
-        <optgroup label="Other Fields">
-          <option value="tags">Tags</option>
-          <option value="callNumber">Call Number</option>
-          <option value="extra">Extra</option>
-          <option value="note">Note</option>
-          <option value="itemType">Item Type</option>
-        </optgroup>
-        <optgroup label="Collections & Search">
-          <option value="collection">Collection</option>
-          <option value="savedSearch">Saved Search</option>
-        </optgroup>
-        <optgroup label="Attachments">
-          <option value="attachmentContent">Attachment Content</option>
-          <option value="attachmentFileType">Attachment File Type</option>
-        </optgroup>
-        <optgroup label="Annotations">
-          <option value="annotationText">Annotation Text</option>
-          <option value="annotationComment">Annotation Comment</option>
-        </optgroup>
-        <optgroup label="Item-Type Specific">
-          <option value="thesisType">Thesis Type</option>
-          <option value="reportType">Report Type</option>
-          <option value="videoRecordingFormat">Video Recording Format</option>
-          <option value="audioFileType">Audio File Type</option>
-          <option value="audioRecordingFormat">Audio Recording Format</option>
-          <option value="letterType">Letter Type</option>
-          <option value="interviewMedium">Interview Medium</option>
-          <option value="manuscriptType">Manuscript Type</option>
-          <option value="presentationType">Presentation Type</option>
-          <option value="mapType">Map Type</option>
-          <option value="artworkMedium">Artwork Medium</option>
-          <option value="programmingLanguage">Programming Language</option>
-        </optgroup>
-      </select>
+  <!-- Unified search UI with condition rows -->
+  <div id="conditions-container">
+    <div id="conditions-list">
+      <!-- Condition rows rendered by JavaScript -->
     </div>
-
-    <div class="control-group">
-      <label for="pattern-type">Pattern Type</label>
-      <select id="pattern-type">
-        <option value="regex">Regular Expression</option>
-        <option value="exact">Exact Match</option>
-        <option value="sql_like">SQL LIKE (%)</option>
-      </select>
-    </div>
-
-    <label class="checkbox-wrapper">
-      <input type="checkbox" id="case-sensitive">
-      <span>Case Sensitive</span>
-    </label>
+    <button id="add-condition-btn" class="secondary">+ Add Condition</button>
   </div>
 
-  <div class="search-row">
-    <input type="text" id="search-input" placeholder="Enter search pattern...">
-    <button id="search-button">Search</button>
+  <!-- Replace In field selector -->
+  <div id="replace-field-container" style="margin-top: 12px; padding: 8px; background: #f0f0f0; border-radius: 4px;">
+    <label for="replace-field-select" style="font-weight: bold;">Replace In:</label>
+    <select id="replace-field-select">
+      <option value="">Select field...</option>
+    </select>
+    <small style="display: block; color: #666; margin-top: 4px;">Only the selected field will be replaced</small>
   </div>
+
+  <!-- Search button -->
+  <div class="search-row" style="margin-top: 12px;">
+    <button id="search-button" class="primary">Search</button>
+  </div>
+
+  <div class="help-text">
+    <small>Tips: ^$ matches empty fields | Use $1, $2 for regex capture groups</small>
+  </div>
+
+  <style>
+    .help-text {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+      margin-bottom: 16px;
+    }
+
+    /* Multi-condition search styles */
+    #multi-condition-container {
+      margin-bottom: 8px;
+    }
+
+    .condition-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .condition-row select,
+    .condition-row input {
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+    }
+
+    .condition-row .operator-select {
+      flex: 0 0 80px;
+    }
+
+    .condition-row .condition-field {
+      flex: 1 1 140px;
+      min-width: 120px;
+    }
+
+    .condition-row .condition-pattern-type {
+      flex: 0 0 90px;
+    }
+
+    .condition-row .condition-pattern {
+      flex: 2 1 200px;
+      min-width: 150px;
+    }
+
+    .condition-row .remove-condition {
+      flex: 0 0 30px;
+      padding: 6px;
+      background: #d44;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .condition-row label:has(input[type="checkbox"]) {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      white-space: nowrap;
+    }
+
+    #add-condition-btn {
+      padding: 6px 12px;
+      background: #eee;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    #add-condition-btn:hover {
+      background: #ddd;
+    }
+
+    .help-text a {
+      color: #0066cc;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    }
+  </style>
 
   <div class="results-section">
     <div class="results-header">

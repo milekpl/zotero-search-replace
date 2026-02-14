@@ -47,7 +47,9 @@ describe('Quality Patterns', () => {
       const validFields = [
         'title', 'abstractNote', 'tags', 'date', 'publicationTitle',
         'DOI', 'ISBN', 'url', 'URL', 'callNumber', 'extra',
-        'creator.lastName', 'creator.firstName', 'creators', 'publisher'
+        'creator.lastName', 'creator.firstName', 'creators', 'publisher',
+        'note', 'place', 'archiveLocation', 'libraryCatalog',
+        'annotationText', 'annotationComment'
       ];
 
       for (const pattern of DATA_QUALITY_PATTERNS) {
@@ -67,7 +69,7 @@ describe('Quality Patterns', () => {
   });
 
   describe('Individual Pattern Tests', () => {
-    // Test pattern regex validity
+    // Test pattern regex validity - handles both string and function replacements
     const testPattern = (pattern, testCases) => {
       describe(pattern.name, () => {
         testCases.forEach(({ input, expected, skip } = {}) => {
@@ -76,16 +78,22 @@ describe('Quality Patterns', () => {
               console.log(`Skipped: ${skip}`);
               return;
             }
-            // For function replacements, apply to the matched part only
+            const regex = new RegExp(pattern.search);
+            const match = input.match(regex);
+
+            if (!match) {
+              // Pattern doesn't match - result is unchanged
+              expect(input).toBe(expected);
+              return;
+            }
+
             if (typeof pattern.replace === 'function') {
-              const match = input.match(new RegExp(pattern.search));
-              if (match) {
-                const result = pattern.replace(match[0]);
-                expect(result).toBe(expected);
-              }
+              // For function replacements, call with match array (standard JS behavior)
+              const result = pattern.replace(...match);
+              expect(result).toBe(expected);
             } else {
               // For string replacements
-              const result = input.replace(new RegExp(pattern.search), pattern.replace);
+              const result = input.replace(regex, pattern.replace);
               expect(result).toBe(expected);
             }
           });
@@ -93,18 +101,59 @@ describe('Quality Patterns', () => {
       });
     };
 
-    // Fix comma space pattern
-    const fixCommaSpace = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-comma-space');
-    testPattern(fixCommaSpace, [
-      { input: 'Doe , John', expected: 'Doe, John' },
-      { input: 'Smith , Jane', expected: 'Smith, Jane' }
+    // Fix Jr/Sr suffix pattern - expects format "Lastname, Jr" -> "Jr, Lastname"
+    const fixJrSuffix = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-jr-suffix');
+    testPattern(fixJrSuffix, [
+      { input: 'Doe, Jr', expected: 'Jr, Doe' },
+      { input: 'Smith, Sr', expected: 'Sr, Smith' },
+      { input: 'Doe, III', expected: 'III, Doe' },
+      { input: 'Van Gogh, II', expected: 'II, Van Gogh' }
+    ]);
+
+    // Double comma pattern
+    const fixDoubleComma = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-double-comma');
+    testPattern(fixDoubleComma, [
+      { input: 'Doe,, John', expected: 'Doe, John' },
+      { input: 'Smith,,, Jane', expected: 'Smith,, Jane' }
+    ]);
+
+    // Trailing comma pattern
+    const fixTrailingComma = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-trailing-comma');
+    testPattern(fixTrailingComma, [
+      { input: 'Doe,', expected: 'Doe' },
+      { input: 'Smith,', expected: 'Smith' }
     ]);
 
     // Remove parens pattern - expects the parens and surrounding spaces to be removed
     const removeParens = DATA_QUALITY_PATTERNS.find(p => p.id === 'remove-parens');
     testPattern(removeParens, [
       { input: 'William (Bill)', expected: 'William' },
-      { input: 'John (Jack) Doe', expected: 'JohnDoe' }
+      { input: 'John (Jack) Doe', expected: 'JohnDoe' },
+      { input: 'William(Bill)', expected: 'William' }
+    ]);
+
+    // Whitespace before colon pattern
+    const fixWhitespaceColon = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-whitespace-colon');
+    testPattern(fixWhitespaceColon, [
+      { input: 'Title : Subtitle', expected: 'Title: Subtitle' },
+      { input: 'Title  : Subtitle', expected: 'Title: Subtitle' },
+      { input: 'Title\t: Subtitle', expected: 'Title: Subtitle' }
+    ]);
+
+    // Whitespace before semicolon pattern
+    const fixWhitespaceSemicolon = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-whitespace-semicolon');
+    testPattern(fixWhitespaceSemicolon, [
+      { input: 'one ; two', expected: 'one; two' },
+      { input: 'one  ; two', expected: 'one; two' },
+      { input: 'one\t; two', expected: 'one; two' }
+    ]);
+
+    // Missing space before opening parenthesis pattern
+    const fixMissingSpaceParen = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-missing-space-paren');
+    testPattern(fixMissingSpaceParen, [
+      { input: 'Title(Subtitle)', expected: 'Title (Subtitle)' },
+      { input: 'Book(Name)', expected: 'Book (Name)' },
+      { input: 'Article:Title(Year)', expected: 'Article:Title (Year)' }
     ]);
 
     // Lowercase van/de pattern - function transforms matched part
@@ -112,6 +161,20 @@ describe('Quality Patterns', () => {
     testPattern(lowercaseVanDe, [
       { input: 'Van Gogh', expected: 'van' },
       { input: 'De la Cruz', expected: 'de' }
+    ]);
+
+    // Normalize Mc prefix pattern
+    const normalizeMc = DATA_QUALITY_PATTERNS.find(p => p.id === 'normalize-mc');
+    testPattern(normalizeMc, [
+      { input: 'McDonald', expected: 'McDonald' },
+      { input: 'MCCULLOCH', expected: 'McCulloch' }
+    ]);
+
+    // Normalize Mac prefix pattern
+    const normalizeMac = DATA_QUALITY_PATTERNS.find(p => p.id === 'normalize-mac');
+    testPattern(normalizeMac, [
+      { input: 'MacDonald', expected: 'MacDonald' },
+      { input: 'MACDONALD', expected: 'MacDonald' }
     ]);
 
     // Polish diacritics pattern
@@ -126,6 +189,27 @@ describe('Quality Patterns', () => {
     const fixHttp = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-url-http');
     testPattern(fixHttp, [
       { input: 'http://example.com', expected: 'https://example.com' }
+    ]);
+
+    // German diacritics pattern
+    const fixGermanDiacritics = DATA_QUALITY_PATTERNS.find(p => p.id === 'fix-german-diacritics');
+    testPattern(fixGermanDiacritics, [
+      { input: 'a"', expected: 'ä' }
+    ]);
+
+    // Corporate authors pattern - removes trailing corporate suffixes with surrounding whitespace
+    const findCorporateAuthors = DATA_QUALITY_PATTERNS.find(p => p.id === 'find-corporate-authors');
+    testPattern(findCorporateAuthors, [
+      { input: 'Nature Publishing Group', expected: 'Nature Publishing' },
+      { input: 'WHO Collaborators', expected: 'WHO' },
+      { input: 'Nature Journal', expected: 'Nature' }
+    ]);
+
+    // Journal in author pattern
+    const findJournalInAuthor = DATA_QUALITY_PATTERNS.find(p => p.id === 'find-journal-in-author');
+    testPattern(findJournalInAuthor, [
+      { input: 'Nature Journal', expected: 'Nature ' },
+      { input: 'Science Review', expected: 'Science ' }
     ]);
   });
 
