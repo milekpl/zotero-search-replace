@@ -39,7 +39,7 @@ class SearchDialog {
     const dialogWindow = mainWindow.openDialog(
       'chrome://zotero-search-replace/content/dialog.html',
       'zotero-search-replace-dialog',
-      'modal,chrome,centerscreen,width=800,height=600',
+      'chrome,centerscreen,resizable=yes,width=800,height=600',
       dialogArgs
     );
 

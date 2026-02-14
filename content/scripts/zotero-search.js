@@ -79,12 +79,14 @@
 
   function openSearchDialog() {
     try {
-      const window = Zotero.getMainWindow();
-      if (window) {
-        window.openDialog(
+      const mainWindow = Zotero.getMainWindow();
+      if (mainWindow) {
+        // Set params on main window (like zotero-ner does)
+        mainWindow.ZoteroSearchReplaceDialogParams = { timestamp: Date.now() };
+        mainWindow.openDialog(
           'chrome://zotero-search-replace/content/dialog.html',
           'zotero-search-replace-dialog',
-          'modal,chrome,centerscreen,width=800,height=600'
+          'chrome,centerscreen,resizable=yes,width=800,height=600'
         );
       }
     } catch (e) {

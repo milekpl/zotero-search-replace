@@ -5,21 +5,27 @@
 
 // Embedded patterns for standalone dialog access
 var EMBEDDED_PATTERNS = [
-  { id: 'fix-comma-space', name: 'Fix: Space Before Comma', description: 'Fixes "surname , name" -> "surname, name"', search: ' ,', replace: ',', category: 'Parsing Errors', fields: ['creator.lastName', 'creator.firstName'] },
   { id: 'fix-jr-suffix', name: 'Fix: Move Jr/Sr Suffix', description: 'Moves "Jr" from given name to surname', search: '(.+), (Jr|Sr|III|II|IV)$', replace: '$2, $1', category: 'Parsing Errors', fields: ['creator.lastName', 'creator.firstName'] },
   { id: 'fix-double-comma', name: 'Fix: Double Commas', description: 'Removes duplicate commas in author names', search: ',,', replace: ',', category: 'Parsing Errors', fields: ['creator.lastName', 'creator.firstName'] },
   { id: 'fix-trailing-comma', name: 'Fix: Trailing Comma', description: 'Removes trailing comma at end of name', search: ',$', replace: '', category: 'Parsing Errors', fields: ['creator.lastName'] },
   { id: 'remove-parens', name: 'Remove: Nicknames in Parens', description: 'Removes "(nickname)" from names', search: '\\s*\\([^)]+\\)\\s*', replace: '', category: 'Data Quality', fields: ['creator.firstName', 'creator.lastName'] },
+  { id: 'fix-whitespace-colon', name: 'Fix: Whitespace Before Colon', description: 'Removes whitespace before colons', search: '\\s+:', replace: ':', category: 'Parsing Errors', fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'] },
+  { id: 'fix-whitespace-semicolon', name: 'Fix: Whitespace Before Semicolon', description: 'Removes whitespace before semicolons', search: '\\s+;', replace: ';', category: 'Parsing Errors', fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'] },
+  { id: 'fix-missing-space-paren', name: 'Fix: Missing Space Before (', description: 'Adds space before opening parenthesis', search: '([a-z])\\(', replace: '$1 (', category: 'Parsing Errors', fields: ['title', 'abstractNote', 'publicationTitle', 'publisher', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog', 'annotationText', 'annotationComment'] },
   { id: 'lowercase-van-de', name: 'Normalize: Dutch Prefixes', description: 'Ensures van/de prefixes stay lowercase', search: '\\b(Van|De|Van Der|De La)\\b', replace: (m) => m.toLowerCase(), category: 'Capitalization', fields: ['creator.lastName'] },
   { id: 'lowercase-von', name: 'Normalize: German von', description: 'Ensures von prefix stays lowercase', search: '\\bVon\\b', replace: 'von', category: 'Capitalization', fields: ['creator.lastName'] },
-  { id: 'normalize-mc-mac', name: 'Normalize: Mc/Mac Prefixes', description: 'Fixes MCCULLOCH -> McCulloch', search: '\\bMc([A-Z][a-z]+)', replace: 'Mc$1', category: 'Capitalization', fields: ['creator.lastName'] },
-  { id: 'normalize-mac', name: 'Normalize: Mac Prefix', description: 'Fixes MAC->Mac when followed by lowercase', search: '\\bMac([a-z])', replace: (m) => 'Mac' + m[3].toUpperCase(), category: 'Capitalization', fields: ['creator.lastName'] },
+  { id: 'normalize-mc', name: 'Normalize: Mc Prefix', description: 'Fixes MCCULLOCH -> McCulloch and McDonald -> McDonald', search: '\\b[Mm][Cc][A-Za-z]*', replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.slice(2).charAt(0).toUpperCase() + m.slice(3).toLowerCase(), category: 'Capitalization', fields: ['creator.lastName'] },
+  { id: 'normalize-mac', name: 'Normalize: Mac Prefix', description: 'Fixes MACDONALD -> MacDonald and MAC->Mac', search: '\\b[Mm][Aa][Cc][A-Za-z]*', replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3).charAt(0).toUpperCase() + m.slice(4).toLowerCase(), category: 'Capitalization', fields: ['creator.lastName'] },
   { id: 'fix-polish-diacritics', name: 'Restore: Polish Diacritics', description: 'Fixes common diacritics errors for Polish names', search: '[lns]slash', replace: (m) => ({ 'lslash': 'ł', 'nslash': 'ń', 'sslash': 'ś' }[m] || m), category: 'Diacritics', fields: ['creator.lastName', 'creator.firstName', 'title'] },
   { id: 'fix-german-diacritics', name: 'Restore: German Diacritics', description: 'Fixes German umlauts from stripped characters', search: 'a"', replace: 'ä', category: 'Diacritics', fields: ['creator.lastName', 'creator.firstName', 'title'] },
   { id: 'find-empty-titles', name: 'Find: Empty Titles', description: 'Find items with missing or empty titles', search: '^\\s*$', replace: '', category: 'Data Quality', fields: ['title'] },
   { id: 'fix-url-http', name: 'Normalize: HTTP to HTTPS', description: 'Updates URLs from http:// to https://', search: 'http://', replace: 'https://', category: 'Data Quality', fields: ['url'] },
-  { id: 'find-corporate-authors', name: 'Find: Corporate Authors', description: 'Find likely corporate/group authors', search: '(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)$', replace: '', category: 'Classification', fields: ['creator.lastName'] },
-  { id: 'find-journal-in-author', name: 'Find: Journal Name in Author', description: 'Find items where journal name appears as author', search: '(Journal|Review|Proceedings|Transactions)', replace: '', category: 'Classification', fields: ['creator.lastName'] }
+  { id: 'remove-all-urls', name: 'Remove: All URLs', description: 'Removes all URLs from the URL field', search: '.+', replace: '', category: 'Data Quality', fields: ['url'] },
+  { id: 'remove-google-books-urls', name: 'Remove: Google Books URLs', description: 'Removes Google Books URLs (books.google.com)', search: 'https?://books\\.google\\.com/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'] },
+  { id: 'remove-worldcat-urls', name: 'Remove: WorldCat URLs', description: 'Removes WorldCat URLs (www.worldcat.org)', search: 'https?://www\\.worldcat\\.org/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'] },
+  { id: 'find-corporate-authors', name: 'Find: Corporate Authors', description: 'Find likely corporate/group authors', search: '\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$', replace: '', category: 'Classification', fields: ['creator.lastName'] },
+  { id: 'find-journal-in-author', name: 'Find: Journal Name in Author', description: 'Find items where journal name appears as author', search: '(Journal|Review|Proceedings|Transactions)', replace: '', category: 'Classification', fields: ['creator.lastName'] },
+  { id: 'find-empty-fields', name: 'Find: Empty Fields', description: 'Find items with empty fields (title, abstract, publication, or missing creators)', search: '^$', replace: '', category: 'Data Quality', fields: ['title', 'abstractNote', 'publicationTitle', 'creator.lastName', 'creator.firstName'] }
 ];
 
 var EMBEDDED_CATEGORIES = ['Parsing Errors', 'Capitalization', 'Diacritics', 'Data Quality', 'Classification'];
@@ -103,7 +109,9 @@ var ZoteroSearchDialog = {
     fields: [],
     results: [],
     selectedItemIDs: new Set(),
-    replacedCount: 0
+    replacedCount: 0,
+    // Unified condition rows
+    conditions: [] // Array of {operator, field, pattern, patternType, caseSensitive}
   },
 
   elements: {},
@@ -117,6 +125,16 @@ var ZoteroSearchDialog = {
     SRdebug('window.ZoteroSearchReplace = ' + typeof window.ZoteroSearchReplace);
     this.cacheElements();
     this.setupEventListeners();
+    // Always initialize with one condition row
+    this.state.conditions.push({
+      operator: 'AND',
+      field: 'title',
+      pattern: '',
+      patternType: 'regex',
+      caseSensitive: false
+    });
+    this.renderConditions();
+    this.updateReplaceFieldOptions();
     this.loadPreloadedPatterns();
     this.updateUIState();
     SRdebug('Dialog init complete');
@@ -124,7 +142,7 @@ var ZoteroSearchDialog = {
 
   cacheElements: function() {
     this.elements = {
-      searchInput: document.getElementById('search-input'),
+      // Keep these for pattern selector presets
       searchField: document.getElementById('search-field'),
       patternType: document.getElementById('pattern-type'),
       caseSensitive: document.getElementById('case-sensitive'),
@@ -139,7 +157,11 @@ var ZoteroSearchDialog = {
       searchError: document.getElementById('search-error'),
       selectAll: document.getElementById('select-all'),
       deselectAll: document.getElementById('deselect-all'),
-      previewReplaceButton: document.getElementById('preview-replace')
+      previewReplaceButton: document.getElementById('preview-replace'),
+      // Unified condition UI elements
+      conditionsList: document.getElementById('conditions-list'),
+      addConditionBtn: document.getElementById('add-condition-btn'),
+      replaceFieldSelect: document.getElementById('replace-field-select')
     };
   },
 
@@ -181,26 +203,227 @@ var ZoteroSearchDialog = {
     if (this.elements.deselectAll) {
       this.elements.deselectAll.addEventListener('click', () => this.deselectAll());
     }
+
+    // Add condition button
+    if (this.elements.addConditionBtn) {
+      this.elements.addConditionBtn.addEventListener('click', () => this.addCondition());
+    }
   },
 
+  // Add a new condition row
+  addCondition: function() {
+    this.state.conditions.push({
+      operator: 'AND',
+      field: 'title',
+      pattern: '',
+      patternType: 'regex',
+      caseSensitive: false
+    });
+    this.renderConditions();
+  },
+
+  // Remove a condition by index
+  removeCondition: function(index) {
+    if (this.state.conditions.length > 1) {
+      this.state.conditions.splice(index, 1);
+      this.renderConditions();
+    }
+  },
+
+  // Render all condition rows
+  renderConditions: function() {
+    const container = this.elements.conditionsList;
+    container.innerHTML = '';
+
+    const allFields = this.getAllFields();
+    const operators = [
+      { value: 'AND', label: 'AND' },
+      { value: 'OR', label: 'OR' },
+      { value: 'AND_NOT', label: 'AND NOT' },
+      { value: 'OR_NOT', label: 'OR NOT' }
+    ];
+    const patternTypes = [
+      { value: 'regex', label: 'Regex' },
+      { value: 'exact', label: 'Exact' },
+      { value: 'contains', label: 'Contains' },
+      { value: 'sql_like', label: 'SQL LIKE' }
+    ];
+
+    this.state.conditions.forEach((condition, index) => {
+      const row = document.createElement('div');
+      row.className = 'condition-row';
+
+      // Operator dropdown (AND/OR/AND NOT/OR NOT) - hidden for first condition
+      const operatorSelect = document.createElement('select');
+      operatorSelect.className = 'operator-select';
+      operatorSelect.style.display = index === 0 ? 'none' : 'block';
+      operators.forEach(op => {
+        const option = document.createElement('option');
+        option.value = op.value;
+        option.textContent = op.label;
+        if (condition.operator === op.value) option.selected = true;
+        operatorSelect.appendChild(option);
+      });
+      operatorSelect.addEventListener('change', (e) => {
+        this.state.conditions[index].operator = e.target.value;
+      });
+
+      // Field dropdown
+      const fieldSelect = document.createElement('select');
+      fieldSelect.className = 'condition-field';
+      allFields.forEach(field => {
+        const option = document.createElement('option');
+        option.value = field.value;
+        option.textContent = field.label;
+        if (condition.field === field.value) option.selected = true;
+        fieldSelect.appendChild(option);
+      });
+      fieldSelect.addEventListener('change', (e) => {
+        this.state.conditions[index].field = e.target.value;
+        // Update replace field options when field changes
+        this.updateReplaceFieldOptions();
+      });
+
+      // Pattern Type dropdown
+      const patternTypeSelect = document.createElement('select');
+      patternTypeSelect.className = 'condition-pattern-type';
+      patternTypes.forEach(pt => {
+        const option = document.createElement('option');
+        option.value = pt.value;
+        option.textContent = pt.label;
+        if ((condition.patternType || 'regex') === pt.value) option.selected = true;
+        patternTypeSelect.appendChild(option);
+      });
+      patternTypeSelect.addEventListener('change', (e) => {
+        this.state.conditions[index].patternType = e.target.value;
+      });
+
+      // Pattern input
+      const patternInput = document.createElement('input');
+      patternInput.type = 'text';
+      patternInput.className = 'condition-pattern';
+      patternInput.placeholder = 'Pattern...';
+      patternInput.value = condition.pattern || '';
+      patternInput.addEventListener('input', (e) => {
+        this.state.conditions[index].pattern = e.target.value;
+      });
+
+      // Case sensitive checkbox
+      const caseSensitiveLabel = document.createElement('label');
+      caseSensitiveLabel.style.display = 'flex';
+      caseSensitiveLabel.style.alignItems = 'center';
+      caseSensitiveLabel.style.whiteSpace = 'nowrap';
+      caseSensitiveLabel.style.fontSize = '11px';
+      const caseSensitiveCheckbox = document.createElement('input');
+      caseSensitiveCheckbox.type = 'checkbox';
+      caseSensitiveCheckbox.title = 'Case sensitive';
+      caseSensitiveCheckbox.checked = condition.caseSensitive || false;
+      caseSensitiveCheckbox.addEventListener('change', (e) => {
+        this.state.conditions[index].caseSensitive = e.target.checked;
+      });
+      caseSensitiveLabel.appendChild(caseSensitiveCheckbox);
+      caseSensitiveLabel.appendChild(document.createTextNode('CS'));
+
+      // Remove button
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-condition';
+      removeBtn.textContent = '\u00D7';
+      removeBtn.title = 'Remove condition';
+      removeBtn.addEventListener('click', () => this.removeCondition(index));
+
+      row.appendChild(operatorSelect);
+      row.appendChild(fieldSelect);
+      row.appendChild(patternTypeSelect);
+      row.appendChild(patternInput);
+      row.appendChild(caseSensitiveLabel);
+      row.appendChild(removeBtn);
+      container.appendChild(row);
+    });
+  },
+
+  // Get all available fields for dropdown
+  // Get field label for a field value (for display)
+  getFieldLabel: function(fieldValue) {
+    const fields = this.getAllFields();
+    const found = fields.find(f => f.value === fieldValue);
+    return found ? found.label : fieldValue;
+  },
+
+  getAllFields: function() {
+    return [
+      // Core fields
+      { value: 'title', label: 'Title' },
+      { value: 'abstractNote', label: 'Abstract' },
+      { value: 'date', label: 'Date' },
+      { value: 'dateModified', label: 'Date Modified' },
+      // Creators
+      { value: 'creator.lastName', label: 'Creator (Last)' },
+      { value: 'creator.firstName', label: 'Creator (First)' },
+      { value: 'creator.fullName', label: 'Creator (Full)' },
+      // Publication
+      { value: 'publicationTitle', label: 'Publication' },
+      { value: 'publisher', label: 'Publisher' },
+      { value: 'volume', label: 'Volume' },
+      { value: 'issue', label: 'Issue' },
+      { value: 'pages', label: 'Pages' },
+      // Identifiers
+      { value: 'DOI', label: 'DOI' },
+      { value: 'ISBN', label: 'ISBN' },
+      { value: 'ISSN', label: 'ISSN' },
+      { value: 'url', label: 'URL' },
+      { value: 'callNumber', label: 'Call Number' },
+      // Other
+      { value: 'extra', label: 'Extra' },
+      { value: 'itemType', label: 'Item Type' },
+      { value: 'tags', label: 'Tags' },
+      { value: 'note', label: 'Note' },
+      // Location (Books)
+      { value: 'place', label: 'Place' },
+      { value: 'archiveLocation', label: 'Archive Location' },
+      { value: 'libraryCatalog', label: 'Library Catalog' }
+    ];
+  },
+
+  // Update the Replace In dropdown based on current conditions
+  updateReplaceFieldOptions: function() {
+    const replaceFieldSelect = this.elements.replaceFieldSelect;
+    if (!replaceFieldSelect) return;
+
+    // Get unique fields from conditions (excluding 'all')
+    const fields = [...new Set(this.state.conditions.map(c => c.field))].filter(f => f !== 'all');
+
+    // Get field labels
+    const allFieldsMap = {};
+    this.getAllFields().forEach(f => allFieldsMap[f.value] = f.label);
+
+    replaceFieldSelect.innerHTML = '';
+    fields.forEach(field => {
+      const option = document.createElement('option');
+      option.value = field;
+      option.textContent = allFieldsMap[field] || field;
+      replaceFieldSelect.appendChild(option);
+    });
+
+    // If current value is not in list, reset to first
+    if (replaceFieldSelect.value && !fields.includes(replaceFieldSelect.value)) {
+      replaceFieldSelect.value = fields[0] || '';
+    }
+  },
+
+  // Perform search with multiple conditions
   performSearch: async function() {
-    const pattern = this.elements.searchInput.value;
-    if (!pattern) {
+    // Get valid conditions (with patterns)
+    const validConditions = this.state.conditions.filter(c => c.pattern && c.pattern.trim());
+    if (validConditions.length === 0) {
       this.showError('Please enter a search pattern');
       return;
     }
 
-    const field = this.elements.searchField.value;
-    const allFields = [
-      'title', 'abstractNote', 'tags', 'date', 'dateModified', 'publicationTitle',
-      'publisher', 'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra',
-      'creator.lastName', 'creator.firstName', 'creator.fullName',
-      'note', 'itemType'
-    ];
-    const fields = field === 'all' ? allFields : [field];
-
-    const patternType = this.elements.patternType.value;
-    const caseSensitive = this.elements.caseSensitive.checked;
+    // Add operators to conditions (first one is implicit AND)
+    const conditions = validConditions.map((c, i) => ({
+      ...c,
+      operator: i === 0 ? 'AND' : (c.operator || 'AND')
+    }));
 
     this.showProgress('Searching...');
 
@@ -211,10 +434,7 @@ var ZoteroSearchDialog = {
       }
 
       const engine = new SearchEngineClass();
-      const results = await engine.search(pattern, {
-        fields,
-        patternType,
-        caseSensitive,
+      const results = await engine.search(conditions, {
         progressCallback: (progress) => {
           if (progress.phase === 'filter') {
             this.showProgress(`Found ${progress.count} potential matches...`);
@@ -225,7 +445,7 @@ var ZoteroSearchDialog = {
       });
 
       this.state.results = results;
-      this.state.fields = fields;
+      this.state.fields = conditions.map(c => c.field);
       this.renderResults();
 
     } catch (e) {
@@ -244,45 +464,135 @@ var ZoteroSearchDialog = {
       list.removeChild(list.firstChild);
     }
 
+    // Group results by itemID to show single line per item
+    const itemsByID = new Map();
     for (const result of this.state.results) {
-      for (const detail of result.matchDetails) {
-        const item = document.createElement('div');
-        item.className = 'result-item';
-        item.dataset.itemID = result.itemID;
-
-        const title = document.createElement('span');
-        title.textContent = result.item.getField('title');
-        title.style.flex = '1';
-
-        const field = document.createElement('span');
-        field.textContent = detail.field;
-        field.style.width = '120px';
-
-        const match = document.createElement('span');
-        const preview = this.getMatchPreview(detail.value, detail.matchIndex, detail.matchLength);
-        match.textContent = preview;
-
-        item.appendChild(title);
-        item.appendChild(field);
-        item.appendChild(match);
-
-        item.addEventListener('click', () => {
-          item.classList.toggle('selected');
-          const id = parseInt(item.dataset.itemID);
-          if (this.state.selectedItemIDs.has(id)) {
-            this.state.selectedItemIDs.delete(id);
-          } else {
-            this.state.selectedItemIDs.add(id);
-          }
-          this.updateUIState();
+      if (!itemsByID.has(result.itemID)) {
+        itemsByID.set(result.itemID, {
+          item: result.item,
+          matchDetails: []
         });
-
-        list.appendChild(item);
       }
+      itemsByID.get(result.itemID).matchDetails.push(...result.matchDetails);
+    }
+
+    for (const [itemID, data] of itemsByID) {
+      const item = document.createElement('div');
+      item.className = 'result-item';
+      item.dataset.itemID = itemID;
+
+      // Get title for display
+      const title = data.item.getField('title') || '(Untitled)';
+      const itemKey = data.item.key;
+
+      // Create field:value pairs from unique match details
+      const fieldChips = [];
+      const seenFields = new Set();
+      for (const detail of data.matchDetails) {
+        if (!seenFields.has(detail.field) && detail.field !== 'title') {
+          seenFields.add(detail.field);
+          const preview = this.getMatchPreview(detail.value, detail.matchIndex, detail.matchLength);
+          // Truncate long values
+          const truncated = preview.length > 50 ? preview.substring(0, 47) + '...' : preview;
+          const label = this.getFieldLabel(detail.field);
+          fieldChips.push(`${label}: "${truncated}"`);
+        }
+      }
+
+      // Build the display: [Title] | field1: "..." | field2: "..."
+      // Title is clickable to open in Zotero
+      const titleLink = document.createElement('a');
+      titleLink.className = 'result-title result-link';
+      titleLink.dataset.itemKey = itemKey;
+      titleLink.textContent = title;
+      titleLink.href = '#';
+      titleLink.style.fontWeight = 'bold';
+      titleLink.style.color = '#0066cc';
+      titleLink.style.textDecoration = 'none';
+      titleLink.style.cursor = 'pointer';
+      titleLink.title = 'Open in Zotero';
+      titleLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openInZotero(itemID);
+      });
+
+      const fieldsSpan = document.createElement('span');
+      fieldsSpan.className = 'result-fields';
+      fieldsSpan.textContent = ' | ' + fieldChips.join(' | ');
+      fieldsSpan.style.color = '#666';
+      fieldsSpan.style.fontSize = '11px';
+
+      item.appendChild(titleLink);
+      item.appendChild(fieldsSpan);
+
+      // Click to select/deselect
+      item.addEventListener('click', () => {
+        item.classList.toggle('selected');
+        const id = parseInt(item.dataset.itemID);
+        if (this.state.selectedItemIDs.has(id)) {
+          this.state.selectedItemIDs.delete(id);
+        } else {
+          this.state.selectedItemIDs.add(id);
+        }
+        this.updateUIState();
+      });
+
+      // Double-click to open in Zotero
+      item.addEventListener('dblclick', () => {
+        this.openInZotero(itemID);
+      });
+
+      list.appendChild(item);
     }
 
     this.elements.resultsCount.textContent = `${this.state.results.length} items found`;
     this.updateUIState();
+  },
+
+  // Open item in Zotero - based on zotero-ner implementation
+  openInZotero: async function(itemID) {
+    try {
+      const item = this.state.results.find(r => r.itemID === itemID)?.item;
+      if (!item) {
+        return;
+      }
+
+      const itemKey = item.key;
+      const itemLibraryID = item.libraryID;
+
+      // Get Zotero from opener
+      const opener = window.opener;
+
+      // Method 1: Use opener.ZoteroPane (like zotero-ner does)
+      if (opener && opener.ZoteroPane && opener.ZoteroPane.selectItem) {
+        if (opener.Zotero && opener.Zotero.Items && opener.Zotero.Items.getByLibraryAndKeyAsync) {
+          const libraryID = opener.Zotero.Libraries ? opener.Zotero.Libraries.userLibraryID : itemLibraryID;
+          opener.Zotero.Items.getByLibraryAndKeyAsync(libraryID, itemKey).then(retrievedItem => {
+            if (retrievedItem && retrievedItem.id) {
+              opener.ZoteroPane.selectItem(retrievedItem.id);
+            } else {
+              opener.ZoteroPane.selectItem(itemKey);
+            }
+          }).catch(() => {
+            opener.ZoteroPane.selectItem(itemKey);
+          });
+        } else {
+          opener.ZoteroPane.selectItem(itemKey);
+        }
+        return;
+      }
+
+      // Method 2: Use zotero:// URI as last resort
+      const zoteroForURL = (opener && opener.Zotero) ? opener.Zotero : getZotero();
+      if (zoteroForURL && zoteroForURL.launchURL) {
+        const url = 'zotero://select/library/items/' + itemKey;
+        zoteroForURL.launchURL(url);
+        return;
+      }
+    } catch (e) {
+      // Silent fail - selection is a convenience feature
+    }
   },
 
   getMatchPreview: function(value, matchIndex, matchLength) {
@@ -322,11 +632,27 @@ var ZoteroSearchDialog = {
       return;
     }
 
+    // Get first valid condition
+    const validConditions = this.state.conditions.filter(c => c.pattern && c.pattern.trim());
+    if (validConditions.length === 0) {
+      this.showError('Please enter a search pattern');
+      return;
+    }
+    const condition = validConditions[0];
+
     const firstResult = this.state.results[0];
-    const searchPattern = this.elements.searchInput.value;
-    const replacePattern = this.elements.replaceInput.value;
-    const patternType = this.elements.patternType.value;
-    const caseSensitive = this.elements.caseSensitive.checked;
+    const searchPattern = condition.pattern;
+    const replacePattern = this.elements.replaceInput ? this.elements.replaceInput.value : '';
+    const patternType = condition.patternType || 'regex';
+    const caseSensitive = condition.caseSensitive || false;
+
+    // Determine which fields to preview
+    let fieldsToPreview;
+    if (this.elements.replaceFieldSelect && this.elements.replaceFieldSelect.value) {
+      fieldsToPreview = [this.elements.replaceFieldSelect.value];
+    } else {
+      fieldsToPreview = this.state.fields;
+    }
 
     try {
       const ReplaceEngineClass = getReplaceEngine();
@@ -336,7 +662,7 @@ var ZoteroSearchDialog = {
 
       const engine = new ReplaceEngineClass();
       const changes = engine.previewReplace(firstResult.item, searchPattern, replacePattern, {
-        fields: this.state.fields,
+        fields: fieldsToPreview,
         patternType,
         caseSensitive
       });
@@ -364,14 +690,29 @@ var ZoteroSearchDialog = {
       return;
     }
 
+    // Get first valid condition
+    const validConditions = this.state.conditions.filter(c => c.pattern && c.pattern.trim());
+    if (validConditions.length === 0) {
+      this.showError('Please enter a search pattern');
+      return;
+    }
+    const condition = validConditions[0];
+
     const selectedItems = this.state.results
       .filter(r => this.state.selectedItemIDs.has(r.itemID))
       .map(r => r.item);
 
-    const searchPattern = this.elements.searchInput.value;
-    const replacePattern = this.elements.replaceInput.value;
-    const patternType = this.elements.patternType.value;
-    const caseSensitive = this.elements.caseSensitive.checked;
+    const searchPattern = condition.pattern;
+    const replacePattern = this.elements.replaceInput ? this.elements.replaceInput.value : '';
+    const patternType = condition.patternType || 'regex';
+    const caseSensitive = condition.caseSensitive || false;
+
+    // Determine which fields to replace - must select a Replace In field
+    if (!this.elements.replaceFieldSelect || !this.elements.replaceFieldSelect.value) {
+      this.showError('Please select which field to replace in (use "Replace In" dropdown)');
+      return;
+    }
+    const fieldsToReplace = [this.elements.replaceFieldSelect.value];
 
     if (!confirm(`Replace in ${selectedItems.length} items?`)) {
       return;
@@ -395,7 +736,7 @@ var ZoteroSearchDialog = {
 
       const engine = new ReplaceEngineClass();
       const result = await engine.processItems(selectedItems, searchPattern, replacePattern, {
-        fields: this.state.fields,
+        fields: fieldsToReplace,
         patternType,
         caseSensitive,
         progressCallback: (progress) => {
@@ -545,14 +886,43 @@ var ZoteroSearchDialog = {
         // Clear previous selection
         container.querySelectorAll('.pattern-item.selected').forEach(el => el.classList.remove('selected'));
         item.classList.add('selected');
-        this.elements.searchInput.value = pattern.search || '';
-        this.elements.replaceInput.value = typeof pattern.replace === 'function' ? '' : (pattern.replace || '');
+
+        // Get the first condition (or create one if none exist)
+        if (this.state.conditions.length === 0) {
+          this.state.conditions.push({
+            operator: 'AND',
+            field: 'title',
+            pattern: '',
+            patternType: 'regex',
+            caseSensitive: false
+          });
+        }
+        const condition = this.state.conditions[0];
+
+        // Set condition values from pattern
+        condition.pattern = pattern.search || '';
         if (pattern.fields && pattern.fields.length > 0) {
-          this.elements.searchField.value = pattern.fields[0];
+          condition.field = pattern.fields[0];
         }
         if (pattern.patternType) {
-          this.elements.patternType.value = pattern.patternType;
+          condition.patternType = pattern.patternType;
         }
+
+        // Set replace input
+        if (this.elements.replaceInput) {
+          this.elements.replaceInput.value = typeof pattern.replace === 'function' ? '' : (pattern.replace || '');
+        }
+
+        // Set Replace In dropdown - use first field from pattern
+        if (pattern.fields && pattern.fields.length > 0 && this.elements.replaceFieldSelect) {
+          const replaceField = pattern.fields[0];
+          // Populate and select the field
+          this.updateReplaceFieldOptions();
+          this.elements.replaceFieldSelect.value = replaceField;
+        }
+
+        // Re-render conditions to show the updated values
+        this.renderConditions();
       });
 
       catDiv.appendChild(item);

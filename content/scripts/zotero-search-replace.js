@@ -283,7 +283,7 @@ if (typeof Zotero !== 'undefined') {
         mainWindow.openDialog(
           'chrome://zotero-search-replace/content/dialog.html',
           'zotero-search-replace-dialog',
-          'modal,chrome,centerscreen,width=900,height=700'
+          'chrome,centerscreen,resizable=yes,width=900,height=700'
         );
       }
 
