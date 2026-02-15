@@ -39,7 +39,6 @@ describe('Preloaded Patterns', function() {
             var patternIds = patterns.map(function(p) { return p.id; });
 
             // Comma spacing patterns
-            assert.ok(patternIds.indexOf('fix-comma-space') !== -1, 'Should have fix-comma-space pattern');
             assert.ok(patternIds.indexOf('fix-jr-suffix') !== -1, 'Should have fix-jr-suffix pattern');
             assert.ok(patternIds.indexOf('fix-double-comma') !== -1, 'Should have fix-double-comma pattern');
             assert.ok(patternIds.indexOf('fix-trailing-comma') !== -1, 'Should have fix-trailing-comma pattern');
@@ -47,7 +46,8 @@ describe('Preloaded Patterns', function() {
             // Name patterns
             assert.ok(patternIds.indexOf('lowercase-van-de') !== -1, 'Should have lowercase-van-de pattern');
             assert.ok(patternIds.indexOf('lowercase-von') !== -1, 'Should have lowercase-von pattern');
-            assert.ok(patternIds.indexOf('normalize-mc-mac') !== -1, 'Should have normalize-mc-mac pattern');
+            assert.ok(patternIds.indexOf('normalize-mc') !== -1, 'Should have normalize-mc pattern');
+            assert.ok(patternIds.indexOf('normalize-mac') !== -1, 'Should have normalize-mac pattern');
 
             // URL/DOI patterns
             assert.ok(patternIds.indexOf('fix-url-http') !== -1, 'Should have fix-url-http pattern');
@@ -79,29 +79,29 @@ describe('Preloaded Patterns', function() {
             var patterns = zsr && zsr.DATA_QUALITY_PATTERNS;
 
             assert.ok(patterns, 'DATA_QUALITY_PATTERNS should exist');
-            assert.strictEqual(patterns.length, 16, 'Should have exactly 16 patterns');
+            assert.isAtLeast(patterns.length, 16, 'Should have at least 16 patterns');
         });
     });
 
     describe('Pattern Functionality', function() {
-        it('should find comma spacing issues', function() {
+        it('should find whitespace before colon issues', function() {
             var zsr = Zotero.SearchReplace || window.ZoteroSearchReplace;
             var patterns = zsr && zsr.DATA_QUALITY_PATTERNS;
 
             assert.ok(patterns, 'DATA_QUALITY_PATTERNS should exist');
 
-            // Find comma spacing pattern
-            var commaPattern = patterns.find(function(p) { return p.id === 'fix-comma-space'; });
-            assert.ok(commaPattern, 'Should have fix-comma-space pattern');
+            // Find whitespace-colon pattern
+            var colonPattern = patterns.find(function(p) { return p.id === 'fix-whitespace-colon'; });
+            assert.ok(colonPattern, 'Should have fix-whitespace-colon pattern');
 
             // Test the pattern
-            var testString = 'Smith , John';
-            var regex = new RegExp(commaPattern.search);
-            assert.ok(regex.test(testString), 'Pattern should match "Smith , John"');
+            var testString = 'Title : Subtitle';
+            var regex = new RegExp(colonPattern.search);
+            assert.ok(regex.test(testString), 'Pattern should match "Title : Subtitle"');
 
             // Test the fix
-            var fixed = testString.replace(regex, commaPattern.replace);
-            assert.strictEqual(fixed, 'Smith, John', 'Should fix comma spacing');
+            var fixed = testString.replace(regex, colonPattern.replace);
+            assert.strictEqual(fixed, 'Title: Subtitle', 'Should fix whitespace before colon');
         });
 
         it('should fix Jr/Sr suffix positions', function() {

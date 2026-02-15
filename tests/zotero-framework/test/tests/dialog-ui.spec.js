@@ -86,14 +86,14 @@ describe('Search & Replace Integration Tests', function() {
             });
             testItems.push(item2);
 
-            // Use the bundled SearchEngine directly
-            const SearchEngine = ZoteroSearchReplace?.SearchEngine || Zotero.SearchReplace?.SearchEngine;
-            if (!SearchEngine) {
+            // Use the bundled SearchEngine directly (use helper like other tests)
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.SearchEngine) {
                 this.skip();
                 return;
             }
 
-            const engine = new SearchEngine();
+            const engine = new zsr.SearchEngine();
             const results = await engine.search('Smith', {
                 fields: ['creator.lastName'],
                 patternType: 'regex',
@@ -116,13 +116,13 @@ describe('Search & Replace Integration Tests', function() {
             });
             testItems.push(item);
 
-            const SearchEngine = ZoteroSearchReplace?.SearchEngine || Zotero.SearchReplace?.SearchEngine;
-            if (!SearchEngine) {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.SearchEngine) {
                 this.skip();
                 return;
             }
 
-            const engine = new SearchEngine();
+            const engine = new zsr.SearchEngine();
             const results = await engine.search('UniquePattern123', {
                 fields: ['title', 'creator.lastName', 'creator.firstName'],
                 patternType: 'regex',
@@ -141,13 +141,13 @@ describe('Search & Replace Integration Tests', function() {
             });
             testItems.push(item);
 
-            const ReplaceEngine = ZoteroSearchReplace?.ReplaceEngine || Zotero.SearchReplace?.ReplaceEngine;
-            if (!ReplaceEngine) {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.ReplaceEngine) {
                 this.skip();
                 return;
             }
 
-            const engine = new ReplaceEngine();
+            const engine = new zsr.ReplaceEngine();
             const result = await engine.processItems([item], 'http://', 'https://', {
                 fields: ['url'],
                 patternType: 'regex'
@@ -168,13 +168,13 @@ describe('Search & Replace Integration Tests', function() {
             });
             testItems.push(item);
 
-            const ReplaceEngine = ZoteroSearchReplace?.ReplaceEngine || Zotero.SearchReplace?.ReplaceEngine;
-            if (!ReplaceEngine) {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.ReplaceEngine) {
                 this.skip();
                 return;
             }
 
-            const engine = new ReplaceEngine();
+            const engine = new zsr.ReplaceEngine();
             const result = await engine.processItems([item], ' ,', ',', {
                 fields: ['creator.lastName'],
                 patternType: 'regex'
@@ -196,13 +196,13 @@ describe('Search & Replace Integration Tests', function() {
             });
             testItems.push(item);
 
-            const ReplaceEngine = ZoteroSearchReplace?.ReplaceEngine || Zotero.SearchReplace?.ReplaceEngine;
-            if (!ReplaceEngine) {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.ReplaceEngine) {
                 this.skip();
                 return;
             }
 
-            const engine = new ReplaceEngine();
+            const engine = new zsr.ReplaceEngine();
             const result = await engine.processItems([item], 'http://', 'https://', {
                 fields: ['url', 'extra'],
                 patternType: 'regex'
@@ -218,7 +218,8 @@ describe('Search & Replace Integration Tests', function() {
 
     describe('Pattern Coverage', function() {
         it('should have all expected pattern categories', function() {
-            const patterns = EMBEDDED_PATTERNS || ZoteroSearchReplace?.DATA_QUALITY_PATTERNS || [];
+            const zsr = getZoteroSearchReplace();
+            const patterns = zsr ? zsr.DATA_QUALITY_PATTERNS : [];
             const categories = new Set(patterns.map(p => p.category));
 
             assert.ok(categories.has('Parsing Errors'), 'Should have Parsing Errors patterns');
@@ -229,10 +230,11 @@ describe('Search & Replace Integration Tests', function() {
         });
 
         it('should have essential fix patterns', function() {
-            const patterns = EMBEDDED_PATTERNS || ZoteroSearchReplace?.DATA_QUALITY_PATTERNS || [];
+            const zsr = getZoteroSearchReplace();
+            const patterns = zsr ? zsr.DATA_QUALITY_PATTERNS : [];
             const patternIds = patterns.map(p => p.id);
 
-            assert.ok(patternIds.includes('fix-comma-space'), 'Should have comma-space fix');
+            assert.ok(patternIds.includes('fix-whitespace-colon'), 'Should have whitespace-colon fix');
             assert.ok(patternIds.includes('fix-url-http'), 'Should have HTTP to HTTPS fix');
             assert.ok(patternIds.includes('remove-parens'), 'Should have remove parens pattern');
         });

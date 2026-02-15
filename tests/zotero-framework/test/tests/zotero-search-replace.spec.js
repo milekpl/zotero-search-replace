@@ -81,7 +81,7 @@ describe('Zotero Search & Replace Extension', function() {
             assert.ok(patterns.length >= 1, 'Should have patterns');
 
             var ids = patterns.map(function(p) { return p.id; });
-            assert.ok(ids.indexOf('fix-comma-space') !== -1, 'Should have fix-comma-space pattern');
+            assert.ok(ids.indexOf('fix-whitespace-colon') !== -1, 'Should have fix-whitespace-colon pattern');
             assert.ok(ids.indexOf('fix-jr-suffix') !== -1, 'Should have fix-jr-suffix pattern');
             assert.ok(ids.indexOf('lowercase-van-de') !== -1, 'Should have lowercase-van-de pattern');
         });
