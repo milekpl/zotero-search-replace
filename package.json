@@ -20,7 +20,14 @@
     "zotero",
     "search",
     "replace",
-    "metadata"
+    "regex",
+    "batch-editing",
+    "metadata",
+    "metadata-cleanup",
+    "data-quality",
+    "bibliographic-data",
+    "reference-manager",
+    "xpi"
   ],
   "author": "Marcin Miłkowski",
   "license": "GPL-3.0",

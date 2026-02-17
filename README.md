@@ -1,6 +1,6 @@
 # Zotero Search & Replace
 
-Advanced search and replace functionality for Zotero bibliographic items.
+Advanced Zotero add‑on to search and batch‑replace bibliographic metadata with regex support, previews, collection scoping, and many built‑in data‑quality patterns.
 
 ## Features
 
