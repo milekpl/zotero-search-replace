@@ -18,10 +18,11 @@ async function createTestItem(options = {}) {
         lastName = '',
         url = '',
         extra = '',
-        tags = []
+        tags = [],
+        itemType = 'journalArticle'
     } = options;
 
-    const item = new Zotero.Item('journalArticle');
+    const item = new Zotero.Item(itemType);
     item.setField('title', title);
     if (url) item.setField('url', url);
     if (extra) item.setField('extra', extra);
@@ -59,6 +60,7 @@ async function cleanupItems(items) {
 describe('Search & Replace Integration Tests', function() {
     this.timeout(120000);
     let testItems = [];
+    let testCollections = [];
 
     before(async function() {
         await Zotero.initializationPromise;
@@ -67,6 +69,14 @@ describe('Search & Replace Integration Tests', function() {
 
     after(async function() {
         await cleanupItems(testItems);
+        // Cleanup test collections
+        for (const collection of testCollections) {
+            try {
+                await collection.eraseTx();
+            } catch (e) {
+                Zotero.debug('Failed to cleanup collection: ' + e.message);
+            }
+        }
     });
 
     describe('SearchEngine with Real Items', function() {
@@ -294,6 +304,51 @@ describe('Search & Replace Integration Tests', function() {
             assert.ok(results.length > 0, 'Should find item with http:// URL');
         });
 
+        it('should filter by itemType using AND condition', async function() {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.SearchEngine) {
+                this.skip();
+                return;
+            }
+
+            // Create a book with URL
+            const bookItem = await createTestItem({
+                title: 'Test Book',
+                itemType: 'book',
+                url: 'http://example.com/book'
+            });
+            testItems.push(bookItem);
+
+            // Create a journalArticle with URL
+            const articleItem = await createTestItem({
+                title: 'Test Article',
+                itemType: 'journalArticle',
+                url: 'http://example.com/article'
+            });
+            testItems.push(articleItem);
+
+            const engine = new zsr.SearchEngine();
+
+            // Search for items with URL AND itemType = book
+            const results = await engine.search([
+                {
+                    field: 'url',
+                    pattern: 'http://',
+                    patternType: 'regex',
+                    operator: 'AND'
+                },
+                {
+                    field: 'itemType',
+                    pattern: 'book',
+                    patternType: 'exact',
+                    operator: 'AND'
+                }
+            ]);
+
+            assert.strictEqual(results.length, 1, 'Should find exactly 1 item');
+            assert.strictEqual(results[0].item.id, bookItem.id, 'Should be the book item');
+        });
+
         it('should find items when searching title field', async function() {
             const zsr = getZoteroSearchReplace();
             if (!zsr || !zsr.SearchEngine) {
@@ -317,6 +372,108 @@ describe('Search & Replace Integration Tests', function() {
             });
 
             assert.ok(results.length > 0, 'Should find item when searching title field');
+        });
+
+        it('should filter by collection using AND condition', async function() {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.SearchEngine) {
+                this.skip();
+                return;
+            }
+
+            // Create a collection
+            const collection = new Zotero.Collection();
+            collection.name = 'Test Collection ' + Date.now();
+            collection.libraryID = Zotero.Libraries.userLibraryID;
+            await collection.saveTx();
+            testCollections.push(collection);
+
+            // Create an item in the collection
+            const itemInCollection = await createTestItem({
+                title: 'Item In Collection',
+                itemType: 'book',
+                url: 'http://example.com/in-collection'
+            });
+            testItems.push(itemInCollection);
+            itemInCollection.addToCollection(collection.id);
+            await itemInCollection.saveTx();
+
+            // Create an item NOT in the collection
+            const itemNotInCollection = await createTestItem({
+                title: 'Item Not In Collection',
+                itemType: 'book',
+                url: 'http://example.com/not-in-collection'
+            });
+            testItems.push(itemNotInCollection);
+
+            const engine = new zsr.SearchEngine();
+
+            // Search for items with URL AND collection = collection.id
+            const results = await engine.search([
+                {
+                    field: 'url',
+                    pattern: 'http://',
+                    patternType: 'regex',
+                    operator: 'AND'
+                },
+                {
+                    field: 'collection',
+                    pattern: collection.id.toString(),
+                    patternType: 'exact',
+                    operator: 'AND'
+                }
+            ]);
+
+            assert.strictEqual(results.length, 1, 'Should find exactly 1 item');
+            assert.strictEqual(results[0].item.id, itemInCollection.id, 'Should be the item in the collection');
+        });
+
+        it('should return all items when no collection condition', async function() {
+            const zsr = getZoteroSearchReplace();
+            if (!zsr || !zsr.SearchEngine) {
+                this.skip();
+                return;
+            }
+
+            // Create a collection
+            const collection = new Zotero.Collection();
+            collection.name = 'Test Collection 2 ' + Date.now();
+            collection.libraryID = Zotero.Libraries.userLibraryID;
+            await collection.saveTx();
+            testCollections.push(collection);
+
+            // Create an item in the collection
+            const itemInCollection = await createTestItem({
+                title: 'Item In Collection 2',
+                itemType: 'book',
+                url: 'http://example.com/in-collection-2'
+            });
+            testItems.push(itemInCollection);
+            itemInCollection.addToCollection(collection.id);
+            await itemInCollection.saveTx();
+
+            // Create an item NOT in the collection
+            const itemNotInCollection = await createTestItem({
+                title: 'Item Not In Collection 2',
+                itemType: 'book',
+                url: 'http://example.com/not-in-collection-2'
+            });
+            testItems.push(itemNotInCollection);
+
+            const engine = new zsr.SearchEngine();
+
+            // Search without collection condition - should find both
+            const results = await engine.search([
+                {
+                    field: 'url',
+                    pattern: 'http://',
+                    patternType: 'regex',
+                    operator: 'AND'
+                }
+            ]);
+
+            // Should find both items (they both have http:// URLs)
+            assert.ok(results.length >= 2, 'Should find at least 2 items (both with URLs)');
         });
     });
 

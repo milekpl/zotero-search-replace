@@ -194,22 +194,24 @@ export const DATA_QUALITY_PATTERNS = [
   {
     id: 'remove-google-books-urls',
     name: 'Remove: Google Books URLs',
-    description: 'Removes Google Books URLs (books.google.com)',
+    description: 'Removes Google Books URLs from books (books.google.com)',
     fields: ['url'],
     patternType: 'regex',
     search: 'https?://books\\.google\\.com/[^\\s]*',
     replace: '',
-    category: 'Data Quality'
+    category: 'Data Quality',
+    secondCondition: { field: 'itemType', pattern: 'book' }
   },
   {
     id: 'remove-worldcat-urls',
     name: 'Remove: WorldCat URLs',
-    description: 'Removes WorldCat URLs (www.worldcat.org)',
+    description: 'Removes WorldCat URLs from books (www.worldcat.org)',
     fields: ['url'],
     patternType: 'regex',
     search: 'https?://www\\.worldcat\\.org/[^\\s]*',
     replace: '',
-    category: 'Data Quality'
+    category: 'Data Quality',
+    secondCondition: { field: 'itemType', pattern: 'book' }
   },
 
   // === Classification ===

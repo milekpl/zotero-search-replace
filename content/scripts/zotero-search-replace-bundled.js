@@ -392,6 +392,32 @@ if (typeof console === 'undefined') {
               break;
             }
           }
+        } else if (field === "itemType") {
+          const itemTypeID = item.itemTypeID;
+          let itemTypeName = null;
+          if (typeof Zotero !== "undefined" && Zotero.ItemTypes) {
+            itemTypeName = Zotero.ItemTypes.getName(itemTypeID);
+          }
+          if (!itemTypeName) {
+            itemTypeName = item.getField("itemType");
+          }
+          const { match } = this.testValue(itemTypeName, pattern, patternType, caseSensitive);
+          if (match !== null) {
+            matchedFields.push(field);
+            matchDetails.push({ field, value: itemTypeName, matchIndex: 0, matchLength: itemTypeName.length });
+          }
+        } else if (field === "collection") {
+          const collectionID = parseInt(pattern, 10);
+          if (!isNaN(collectionID)) {
+            try {
+              const collections = item.getCollections();
+              if (collections && collections.includes(collectionID)) {
+                matchedFields.push(field);
+                matchDetails.push({ field, value: "collection:" + collectionID, matchIndex: 0, matchLength: String(collectionID).length });
+              }
+            } catch (e) {
+            }
+          }
         } else {
           try {
             value = item.getField(field);
@@ -887,22 +913,24 @@ if (typeof console === 'undefined') {
     {
       id: "remove-google-books-urls",
       name: "Remove: Google Books URLs",
-      description: "Removes Google Books URLs (books.google.com)",
+      description: "Removes Google Books URLs from books (books.google.com)",
       fields: ["url"],
       patternType: "regex",
       search: "https?://books\\.google\\.com/[^\\s]*",
       replace: "",
-      category: "Data Quality"
+      category: "Data Quality",
+      secondCondition: { field: "itemType", pattern: "book" }
     },
     {
       id: "remove-worldcat-urls",
       name: "Remove: WorldCat URLs",
-      description: "Removes WorldCat URLs (www.worldcat.org)",
+      description: "Removes WorldCat URLs from books (www.worldcat.org)",
       fields: ["url"],
       patternType: "regex",
       search: "https?://www\\.worldcat\\.org/[^\\s]*",
       replace: "",
-      category: "Data Quality"
+      category: "Data Quality",
+      secondCondition: { field: "itemType", pattern: "book" }
     },
     // === Classification ===
     {

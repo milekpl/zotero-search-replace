@@ -638,6 +638,41 @@ class SearchEngine {
             break;
           }
         }
+      } else if (field === 'itemType') {
+        // Item type - use itemTypeID to get the raw type name
+        // Zotero stores itemType as integer ID, getField returns localized string
+        // We need to use Zotero.ItemTypes to get the type name
+        const itemTypeID = item.itemTypeID;
+        let itemTypeName = null;
+        if (typeof Zotero !== 'undefined' && Zotero.ItemTypes) {
+          itemTypeName = Zotero.ItemTypes.getName(itemTypeID);
+        }
+        // If we can't get the type name, fall back to getField (localized)
+        if (!itemTypeName) {
+          itemTypeName = item.getField('itemType');
+        }
+
+        // Match against the type name (e.g., 'book', 'journalArticle')
+        const { match } = this.testValue(itemTypeName, pattern, patternType, caseSensitive);
+        if (match !== null) {
+          matchedFields.push(field);
+          matchDetails.push({ field, value: itemTypeName, matchIndex: 0, matchLength: itemTypeName.length });
+        }
+      } else if (field === 'collection') {
+        // Collection - check if item is in the specified collection
+        // pattern should be collection ID as string
+        const collectionID = parseInt(pattern, 10);
+        if (!isNaN(collectionID)) {
+          try {
+            const collections = item.getCollections();
+            if (collections && collections.includes(collectionID)) {
+              matchedFields.push(field);
+              matchDetails.push({ field, value: 'collection:' + collectionID, matchIndex: 0, matchLength: String(collectionID).length });
+            }
+          } catch (e) {
+            // getCollections might not exist or fail
+          }
+        }
       } else {
         // Standard field
         try {

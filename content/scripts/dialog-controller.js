@@ -21,8 +21,8 @@ var EMBEDDED_PATTERNS = [
   { id: 'find-empty-titles', name: 'Find: Empty Titles', description: 'Find items with missing or empty titles', search: '^\\s*$', replace: '', category: 'Data Quality', fields: ['title'] },
   { id: 'fix-url-http', name: 'Normalize: HTTP to HTTPS', description: 'Updates URLs from http:// to https://', search: 'http://', replace: 'https://', category: 'Data Quality', fields: ['url'] },
   { id: 'remove-all-urls', name: 'Remove: All URLs', description: 'Removes all URLs from the URL field', search: '.+', replace: '', category: 'Data Quality', fields: ['url'] },
-  { id: 'remove-google-books-urls', name: 'Remove: Google Books URLs', description: 'Removes Google Books URLs (books.google.com)', search: 'https?://books\\.google\\.com/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'] },
-  { id: 'remove-worldcat-urls', name: 'Remove: WorldCat URLs', description: 'Removes WorldCat URLs (www.worldcat.org)', search: 'https?://www\\.worldcat\\.org/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'] },
+  { id: 'remove-google-books-urls', name: 'Remove: Google Books URLs', description: 'Removes Google Books URLs from books (books.google.com)', search: 'https?://books\\.google\\.com/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'], secondCondition: { field: 'itemType', pattern: 'book' } },
+  { id: 'remove-worldcat-urls', name: 'Remove: WorldCat URLs', description: 'Removes WorldCat URLs from books (www.worldcat.org)', search: 'https?://www\\.worldcat\\.org/[^\\s]*', replace: '', category: 'Data Quality', fields: ['url'], secondCondition: { field: 'itemType', pattern: 'book' } },
   { id: 'find-corporate-authors', name: 'Find: Corporate Authors', description: 'Find likely corporate/group authors', search: '\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$', replace: '', category: 'Classification', fields: ['creator.lastName'] },
   { id: 'find-journal-in-author', name: 'Find: Journal Name in Author', description: 'Find items where journal name appears as author', search: '(Journal|Review|Proceedings|Transactions)', replace: '', category: 'Classification', fields: ['creator.lastName'] },
   { id: 'find-empty-fields', name: 'Find: Empty Fields', description: 'Find items with empty fields (title, abstract, publication, or missing creators)', search: '^$', replace: '', category: 'Data Quality', fields: ['title', 'abstractNote', 'publicationTitle', 'creator.lastName', 'creator.firstName'] }
@@ -149,6 +149,48 @@ function getZotero() {
     return Zotero;
   }
   return null;
+}
+
+// Get the currently selected collection from Zotero's main window
+// Returns {id, name, libraryID} or null if no collection selected (i.e., whole library or at library root)
+function getSelectedCollection() {
+  try {
+    // Try window.opener.ZoteroPane first (for dialogs)
+    var ZoteroPane = null;
+    if (window.opener && window.opener.ZoteroPane) {
+      ZoteroPane = window.opener.ZoteroPane;
+    } else if (typeof Zotero !== 'undefined' && Zotero.ZoteroPane) {
+      ZoteroPane = Zotero.ZoteroPane;
+    }
+
+    if (!ZoteroPane) {
+      return null;
+    }
+
+    var row = ZoteroPane.getCollectionTreeRow ? ZoteroPane.getCollectionTreeRow() : null;
+    if (!row || !row.ref || !row.ref.id) {
+      return null;
+    }
+
+    // Check if this is actually a collection (not the library itself, trash, publications, etc.)
+    // If isCollection() returns false, we're at the library root level - search whole library
+    if (!row.isCollection || !row.isCollection()) {
+      return null;
+    }
+
+    // This is a specific collection
+    var ref = row.ref;
+    var name = row.getName ? row.getName() : (ref.name || 'Unknown');
+
+    return {
+      id: ref.id,
+      name: name,
+      libraryID: ref.libraryID
+    };
+  } catch (e) {
+    SRdebug('getSelectedCollection error: ' + e.message);
+    return null;
+  }
 }
 
 var ZoteroSearchDialog = {
@@ -337,27 +379,40 @@ var ZoteroSearchDialog = {
         this.renderConditions();
       });
 
-      // Pattern Type dropdown
+      // Get field type info BEFORE using isDropdown
+      const fieldTypeInfo = this.getFieldTypeInfo(condition.field);
+      const isDropdown = fieldTypeInfo.type === 'dropdown';
+
+      // Pattern Type dropdown (or "=" for dropdown fields)
       const patternTypeSelect = document.createElement('select');
       patternTypeSelect.className = 'condition-pattern-type';
-      patternTypes.forEach(pt => {
-        const option = document.createElement('option');
-        option.value = pt.value;
-        option.textContent = pt.label;
-        if ((condition.patternType || 'regex') === pt.value) option.selected = true;
-        patternTypeSelect.appendChild(option);
-      });
-      patternTypeSelect.addEventListener('change', (e) => {
-        this.state.conditions[index].patternType = e.target.value;
-      });
+
+      // For dropdown fields (like itemType), show "=" and use exact matching
+      if (isDropdown) {
+        const eqOption = document.createElement('option');
+        eqOption.value = 'exact';
+        eqOption.textContent = '=';
+        eqOption.selected = true;
+        patternTypeSelect.appendChild(eqOption);
+        // Store patternType in condition
+        this.state.conditions[index].patternType = 'exact';
+        patternTypeSelect.disabled = true;
+      } else {
+        patternTypes.forEach(pt => {
+          const option = document.createElement('option');
+          option.value = pt.value;
+          option.textContent = pt.label;
+          if ((condition.patternType || 'regex') === pt.value) option.selected = true;
+          patternTypeSelect.appendChild(option);
+        });
+        patternTypeSelect.addEventListener('change', (e) => {
+          this.state.conditions[index].patternType = e.target.value;
+        });
+      }
 
       // Pattern input container - will hold different input types based on field
       const patternContainer = document.createElement('div');
       patternContainer.className = 'condition-pattern-container';
-
-      // Get the field type info
-      const fieldTypeInfo = this.getFieldTypeInfo(condition.field);
-      const isDropdown = fieldTypeInfo.type === 'dropdown';
 
       // Create text input (default)
       const patternInput = document.createElement('input');
@@ -409,7 +464,7 @@ var ZoteroSearchDialog = {
             xulMenulist.value = condition.pattern;
           }
 
-          xulMenulist.addEventListener('change', (e) => {
+          xulMenulist.addEventListener('command', (e) => {
             this.state.conditions[index].pattern = e.target.value;
           });
 
@@ -571,8 +626,17 @@ var ZoteroSearchDialog = {
 
   // Perform search with multiple conditions
   performSearch: async function() {
+    // Debug: show ALL conditions before filtering
+    if (typeof Zotero !== 'undefined' && Zotero.debug) {
+      Zotero.debug('SearchReplace: ALL conditions before filter = ' + JSON.stringify(this.state.conditions.map(c => ({field: c.field, pattern: c.pattern, patternType: c.patternType}))));
+    }
+
     // Get valid conditions (with patterns)
     const validConditions = this.state.conditions.filter(c => c.pattern && c.pattern.trim());
+
+    if (typeof Zotero !== 'undefined' && Zotero.debug) {
+      Zotero.debug('SearchReplace: performSearch validConditions = ' + JSON.stringify(validConditions.map(c => ({field: c.field, pattern: c.pattern, patternType: c.patternType}))));
+    }
     if (validConditions.length === 0) {
       this.showError('Please enter a search pattern');
       return;
@@ -584,6 +648,23 @@ var ZoteroSearchDialog = {
       operator: i === 0 ? 'AND' : (c.operator || 'AND')
     }));
 
+    // Add implicit collection scope if a collection is selected in Zotero's main window
+    // This scopes the search to the currently selected collection
+    const selectedCollection = getSelectedCollection();
+    let searchOptions = {};
+    if (selectedCollection) {
+      SRdebug('SearchReplace: Scoping to collection: ' + selectedCollection.name + ' (ID: ' + selectedCollection.id + ', libraryID: ' + selectedCollection.libraryID + ')');
+      conditions.push({
+        field: 'collection',
+        pattern: selectedCollection.id.toString(),
+        patternType: 'exact',
+        operator: 'AND',
+        _collectionName: selectedCollection.name // For UI display
+      });
+      // Also set libraryID to ensure we search the correct library (handles group libraries)
+      searchOptions.libraryID = selectedCollection.libraryID;
+    }
+
     this.showProgress('Searching...');
 
     try {
@@ -594,6 +675,7 @@ var ZoteroSearchDialog = {
 
       const engine = new SearchEngineClass();
       const results = await engine.search(conditions, {
+        ...searchOptions,
         progressCallback: (progress) => {
           if (progress.phase === 'filter') {
             this.showProgress(`Found ${progress.count} potential matches...`);
@@ -1065,6 +1147,31 @@ var ZoteroSearchDialog = {
         }
         if (pattern.patternType) {
           condition.patternType = pattern.patternType;
+        }
+
+        // Handle second condition (e.g., itemType = book for URL patterns)
+        if (pattern.secondCondition) {
+          // Ensure we have at least 2 conditions
+          while (this.state.conditions.length < 2) {
+            this.state.conditions.push({
+              operator: 'AND',
+              field: 'title',
+              pattern: '',
+              patternType: 'regex',
+              caseSensitive: false
+            });
+          }
+          // Set second condition
+          this.state.conditions[1] = {
+            operator: 'AND',
+            field: pattern.secondCondition.field,
+            pattern: pattern.secondCondition.pattern,
+            patternType: 'exact',
+            caseSensitive: false
+          };
+        } else if (this.state.conditions.length > 1) {
+          // Remove extra conditions if no secondCondition
+          this.state.conditions.splice(1);
         }
 
         // Set replace input
