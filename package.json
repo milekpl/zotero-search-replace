@@ -1,6 +1,6 @@
 {
   "name": "zotero-search-replace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zotero search and replace plugin with regex support and preloaded data quality patterns",
   "main": "index.js",
   "scripts": {
