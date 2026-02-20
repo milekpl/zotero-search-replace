@@ -388,9 +388,21 @@ class SearchEngine {
     const allFields = [...new Set(conditions.map(c => c.field).filter(f => f))];
     const fields = allFields.length > 0 ? allFields : ['title'];
 
+    // FIX: Always skip Phase 1 for regex patterns
+    // The Phase 1 SQL filtering was broken for regex - it passed literal regex strings
+    // to SQLite LIKE queries (e.g., '\s+:' instead of actual whitespace), causing
+    // false negatives. Since pure JS regex is fast enough (<10ms for typical libraries),
+    // we skip Phase 1 entirely for regex patterns.
+    const hasRegexCondition = conditions.some(c => c.patternType === PATTERN_TYPES.REGEX);
+
     // When searching many fields (All Fields), skip Phase 1 and get all items
     const PHASE1_FIELD_THRESHOLD = 5;
     let skipPhase1 = fields.length > PHASE1_FIELD_THRESHOLD;
+
+    // For regex patterns, always skip Phase 1 (fixes false negatives from broken literal extraction)
+    if (hasRegexCondition) {
+      skipPhase1 = true;
+    }
 
     // Skip Phase 1 if we have NOT conditions (they need full evaluation)
     const hasNotConditions = conditions.some(c => c.operator === 'AND_NOT' || c.operator === 'OR_NOT');
@@ -528,7 +540,8 @@ class SearchEngine {
       }
     }
 
-    // Determine final match based on first condition's operator
+    // Determine final match based on the first condition's operator
+    // This preserves the user's intent (AND or OR) from the first condition
     const firstOp = conditions[0].operator || 'AND';
     const allPositiveMatched = positiveResults.every(r => r);
 

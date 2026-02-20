@@ -66,11 +66,12 @@ describe('Preloaded Patterns', function() {
                 assert.ok(pattern.description, 'Pattern ' + i + ' (' + pattern.id + ') should have description');
                 assert.ok(pattern.category, 'Pattern ' + i + ' (' + pattern.id + ') should have category');
 
-                // Pattern should have either search/replace (regex patterns) OR customCheck (custom patterns)
-                var hasRegexPattern = pattern.search !== undefined && pattern.replace !== undefined;
+                // Pattern should have either conditions array (new format) OR search/replace (legacy) OR customCheck (custom patterns)
+                var hasConditions = pattern.conditions && pattern.conditions.length > 0;
+                var hasLegacySearch = pattern.search !== undefined && pattern.replace !== undefined;
                 var hasCustomPattern = pattern.customCheck !== undefined;
-                assert.ok(hasRegexPattern || hasCustomPattern,
-                    'Pattern ' + i + ' (' + pattern.id + ') should have search/replace or customCheck');
+                assert.ok(hasConditions || hasLegacySearch || hasCustomPattern,
+                    'Pattern ' + i + ' (' + pattern.id + ') should have conditions or search/replace or customCheck');
             }
         });
 
@@ -84,6 +85,11 @@ describe('Preloaded Patterns', function() {
     });
 
     describe('Pattern Functionality', function() {
+        // Helper to get search pattern from either old or new format
+        function getSearchPattern(pattern) {
+            return pattern.conditions ? pattern.conditions[0].pattern : pattern.search;
+        }
+
         it('should find whitespace before colon issues', function() {
             var zsr = Zotero.SearchReplace || window.ZoteroSearchReplace;
             var patterns = zsr && zsr.DATA_QUALITY_PATTERNS;
@@ -94,9 +100,10 @@ describe('Preloaded Patterns', function() {
             var colonPattern = patterns.find(function(p) { return p.id === 'fix-whitespace-colon'; });
             assert.ok(colonPattern, 'Should have fix-whitespace-colon pattern');
 
-            // Test the pattern
+            // Test the pattern (handle both old and new format)
+            var searchPattern = getSearchPattern(colonPattern);
             var testString = 'Title : Subtitle';
-            var regex = new RegExp(colonPattern.search);
+            var regex = new RegExp(searchPattern);
             assert.ok(regex.test(testString), 'Pattern should match "Title : Subtitle"');
 
             // Test the fix
@@ -114,8 +121,9 @@ describe('Preloaded Patterns', function() {
             assert.ok(jrPattern, 'Should have fix-jr-suffix pattern');
 
             // Pattern expects format: "Last, Jr" or "Last Jr, First" with suffix at end
+            var searchPattern = getSearchPattern(jrPattern);
             var testString = 'Smith, Jr';
-            var regex = new RegExp(jrPattern.search);
+            var regex = new RegExp(searchPattern);
             assert.ok(regex.test(testString), 'Pattern should match "Smith, Jr"');
 
             var fixed = testString.replace(regex, jrPattern.replace);
@@ -131,8 +139,9 @@ describe('Preloaded Patterns', function() {
             var vanDePattern = patterns.find(function(p) { return p.id === 'lowercase-van-de'; });
             assert.ok(vanDePattern, 'Should have lowercase-van-de pattern');
 
+            var searchPattern = getSearchPattern(vanDePattern);
             var testString = 'Van der Waals';
-            var regex = new RegExp(vanDePattern.search);
+            var regex = new RegExp(searchPattern);
             assert.ok(regex.test(testString), 'Pattern should match "Van der Waals"');
 
             // Function replacement
@@ -149,8 +158,9 @@ describe('Preloaded Patterns', function() {
             var httpPattern = patterns.find(function(p) { return p.id === 'fix-url-http'; });
             assert.ok(httpPattern, 'Should have fix-url-http pattern');
 
+            var searchPattern = getSearchPattern(httpPattern);
             var testString = 'http://example.com';
-            var regex = new RegExp(httpPattern.search);
+            var regex = new RegExp(searchPattern);
             assert.ok(regex.test(testString), 'Pattern should match http URL');
 
             var fixed = testString.replace(regex, httpPattern.replace);

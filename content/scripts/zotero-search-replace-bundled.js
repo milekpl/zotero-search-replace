@@ -224,8 +224,12 @@ if (typeof console === 'undefined') {
       }
       const allFields = [...new Set(conditions.map((c) => c.field).filter((f) => f))];
       const fields = allFields.length > 0 ? allFields : ["title"];
+      const hasRegexCondition = conditions.some((c) => c.patternType === PATTERN_TYPES.REGEX);
       const PHASE1_FIELD_THRESHOLD = 5;
       let skipPhase1 = fields.length > PHASE1_FIELD_THRESHOLD;
+      if (hasRegexCondition) {
+        skipPhase1 = true;
+      }
       const hasNotConditions = conditions.some((c) => c.operator === "AND_NOT" || c.operator === "OR_NOT");
       if (hasNotConditions) {
         skipPhase1 = true;
@@ -739,9 +743,10 @@ if (typeof console === 'undefined') {
       id: "fix-jr-suffix",
       name: "Fix: Move Jr/Sr Suffix",
       description: 'Moves "Jr" from given name to surname',
-      fields: ["creator.lastName", "creator.firstName"],
-      patternType: "regex",
-      search: "(.+), (Jr|Sr|III|II|IV)$",
+      conditions: [
+        { operator: "OR", field: "creator.lastName", pattern: "(.+), (Jr|Sr|III|II|IV)$", patternType: "regex" },
+        { operator: "OR", field: "creator.firstName", pattern: "(.+), (Jr|Sr|III|II|IV)$", patternType: "regex" }
+      ],
       replace: "$2, $1",
       category: "Parsing Errors"
     },
@@ -749,9 +754,10 @@ if (typeof console === 'undefined') {
       id: "fix-double-comma",
       name: "Fix: Double Commas",
       description: "Removes duplicate commas in author names",
-      fields: ["creator.lastName", "creator.firstName"],
-      patternType: "regex",
-      search: ",,",
+      conditions: [
+        { operator: "OR", field: "creator.lastName", pattern: ",,", patternType: "regex" },
+        { operator: "OR", field: "creator.firstName", pattern: ",,", patternType: "regex" }
+      ],
       replace: ",",
       category: "Parsing Errors"
     },
@@ -759,49 +765,60 @@ if (typeof console === 'undefined') {
       id: "fix-trailing-comma",
       name: "Fix: Trailing Comma",
       description: "Removes trailing comma at end of name",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: ",$",
+      conditions: [
+        { field: "creator.lastName", pattern: ",$", patternType: "regex" }
+      ],
       replace: "",
+      category: "Parsing Errors"
+    },
+    {
+      id: "find-spurious-dot",
+      name: "Find: Spurious Dot in Given Name",
+      description: 'Finds spurious dots after given names (e.g., "John." instead of "John")',
+      conditions: [
+        { field: "creator.firstName", pattern: "([a-z]{2,})\\.$", patternType: "regex" }
+      ],
+      replace: "$1",
       category: "Parsing Errors"
     },
     {
       id: "remove-parens",
       name: "Remove: Nicknames in Parens",
       description: 'Removes "(nickname)" from names',
-      fields: ["creator.firstName", "creator.lastName"],
-      patternType: "regex",
-      search: "\\s*\\([^)]+\\)\\s*",
+      conditions: [
+        { operator: "OR", field: "creator.firstName", pattern: "\\s*\\([^)]+\\)\\s*", patternType: "regex" },
+        { operator: "OR", field: "creator.lastName", pattern: "\\s*\\([^)]+\\)\\s*", patternType: "regex" }
+      ],
       replace: "",
       category: "Data Quality"
     },
     {
       id: "fix-whitespace-colon",
       name: "Fix: Whitespace Before Colon",
-      description: "Removes whitespace before colons",
-      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
-      patternType: "regex",
-      search: "\\s+:",
+      description: "Removes whitespace before colons (all fields)",
+      conditions: [
+        { field: "all", pattern: "\\s+:", patternType: "regex" }
+      ],
       replace: ":",
       category: "Parsing Errors"
     },
     {
       id: "fix-whitespace-semicolon",
       name: "Fix: Whitespace Before Semicolon",
-      description: "Removes whitespace before semicolons",
-      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
-      patternType: "regex",
-      search: "\\s+;",
+      description: "Removes whitespace before semicolons (all fields)",
+      conditions: [
+        { field: "all", pattern: "\\s+;", patternType: "regex" }
+      ],
       replace: ";",
       category: "Parsing Errors"
     },
     {
       id: "fix-missing-space-paren",
       name: "Fix: Missing Space Before (",
-      description: "Adds space before opening parenthesis",
-      fields: ["title", "abstractNote", "publicationTitle", "publisher", "note", "extra", "place", "archiveLocation", "libraryCatalog", "annotationText", "annotationComment"],
-      patternType: "regex",
-      search: "([a-z])\\(",
+      description: "Adds space before opening parenthesis (all fields)",
+      conditions: [
+        { field: "all", pattern: "([a-z])\\(", patternType: "regex" }
+      ],
       replace: "$1 (",
       category: "Parsing Errors"
     },
@@ -810,9 +827,9 @@ if (typeof console === 'undefined') {
       id: "lowercase-van-de",
       name: "Normalize: Dutch Prefixes",
       description: "Ensures van/de prefixes stay lowercase",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "\\b(Van|De|Van Der|De La)\\b",
+      conditions: [
+        { field: "creator.lastName", pattern: "\\b(Van|De|Van Der|De La)\\b", patternType: "regex" }
+      ],
       replace: (match) => match.toLowerCase(),
       category: "Capitalization"
     },
@@ -820,9 +837,9 @@ if (typeof console === 'undefined') {
       id: "lowercase-von",
       name: "Normalize: German von",
       description: "Ensures von prefix stays lowercase",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "\\bVon\\b",
+      conditions: [
+        { field: "creator.lastName", pattern: "\\bVon\\b", patternType: "regex" }
+      ],
       replace: "von",
       category: "Capitalization"
     },
@@ -830,9 +847,9 @@ if (typeof console === 'undefined') {
       id: "normalize-mc",
       name: "Normalize: Mc Prefix",
       description: "Fixes MCCULLOCH -> McCulloch and McDonald -> McDonald",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "\\b[Mm][Cc][A-Za-z]*",
+      conditions: [
+        { field: "creator.lastName", pattern: "\\b[Mm][Cc][A-Za-z]*", patternType: "regex" }
+      ],
       replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.slice(2).charAt(0).toUpperCase() + m.slice(3).toLowerCase(),
       category: "Capitalization"
     },
@@ -840,53 +857,64 @@ if (typeof console === 'undefined') {
       id: "normalize-mac",
       name: "Normalize: Mac Prefix",
       description: "Fixes MACDONALD -> MacDonald",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "\\b[Mm][Aa][Cc][A-Za-z]*",
-      replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3).charAt(0).toUpperCase() + m.slice(4).toLowerCase(),
+      conditions: [
+        { field: "creator.lastName", pattern: "\\b[Mm][Aa][Cc][A-Za-z]*", patternType: "regex" }
+      ],
+      replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.charAt(2).toUpperCase() + m.slice(3).toLowerCase(),
       category: "Capitalization"
     },
     // === Diacritics ===
     {
       id: "fix-polish-diacritics",
       name: "Restore: Polish Diacritics",
-      description: "Fixes common diacritics errors for Polish names",
-      fields: ["creator.lastName", "creator.firstName", "title"],
-      patternType: "regex",
-      search: "[lns]slash",
-      replace: (match) => {
-        const map = { "lslash": "\u0142", "nslash": "\u0144", "sslash": "\u015B" };
-        return map[match] || match;
-      },
+      description: "Fixes BibTeX-encoded Polish diacritics (l/\u2192\u0142, n/\u2192\u0144, s/\u2192\u015B)",
+      conditions: [
+        { field: "all", pattern: "l/", patternType: "regex" }
+      ],
+      replace: "\u0142",
       category: "Diacritics"
     },
     {
       id: "fix-german-diacritics",
       name: "Restore: German Diacritics",
-      description: "Fixes German umlauts from stripped characters",
-      fields: ["creator.lastName", "creator.firstName", "title"],
-      patternType: "regex",
-      search: 'a"',
+      description: 'Fixes German umlauts from stripped characters (a"\u2192\xE4, o"\u2192\xF6, u"\u2192\xFC, e"\u2192\xEB)',
+      conditions: [
+        { field: "all", pattern: 'a"', patternType: "regex" }
+      ],
       replace: "\xE4",
+      category: "Diacritics"
+    },
+    {
+      id: "fix-german-eszett",
+      name: "Restore: German Eszett",
+      description: "Fixes \xDF from ss (BibTeX strips \xDF to ss)",
+      conditions: [
+        { operator: "OR", field: "creator.lastName", pattern: "ss(?=[a-zA-Z]|$)", patternType: "regex" },
+        { operator: "OR", field: "creator.firstName", pattern: "ss(?=[a-zA-Z]|$)", patternType: "regex" },
+        { operator: "OR", field: "title", pattern: "ss(?=[a-zA-Z]|$)", patternType: "regex" }
+      ],
+      replace: "\xDF",
       category: "Diacritics"
     },
     // === Data Quality ===
     {
       id: "find-empty-creators",
       name: "Find: Empty Creator Fields",
-      description: "Find items with missing creator names",
-      fields: ["creators"],
-      patternType: "custom",
-      customCheck: (creators) => creators && creators.some((c) => !c.firstName && !c.lastName),
+      description: "Find items with missing creator names (empty lastName OR empty firstName)",
+      conditions: [
+        { operator: "OR", field: "creator.lastName", pattern: "^$", patternType: "regex" },
+        { operator: "OR", field: "creator.firstName", pattern: "^$", patternType: "regex" }
+      ],
+      replace: "",
       category: "Data Quality"
     },
     {
       id: "find-empty-titles",
       name: "Find: Empty Titles",
       description: "Find items with missing or empty titles",
-      fields: ["title"],
-      patternType: "regex",
-      search: "^\\s*$",
+      conditions: [
+        { field: "title", pattern: "^\\s*$", patternType: "regex" }
+      ],
       replace: "",
       category: "Data Quality"
     },
@@ -894,9 +922,9 @@ if (typeof console === 'undefined') {
       id: "fix-url-http",
       name: "Normalize: HTTP to HTTPS",
       description: "Updates URLs from http:// to https://",
-      fields: ["url"],
-      patternType: "regex",
-      search: "http://",
+      conditions: [
+        { field: "url", pattern: "http://", patternType: "regex" }
+      ],
       replace: "https://",
       category: "Data Quality"
     },
@@ -904,9 +932,9 @@ if (typeof console === 'undefined') {
       id: "remove-all-urls",
       name: "Remove: All URLs",
       description: "Removes all URLs from the URL field",
-      fields: ["url"],
-      patternType: "regex",
-      search: ".+",
+      conditions: [
+        { field: "url", pattern: ".+", patternType: "regex" }
+      ],
       replace: "",
       category: "Data Quality"
     },
@@ -914,32 +942,32 @@ if (typeof console === 'undefined') {
       id: "remove-google-books-urls",
       name: "Remove: Google Books URLs",
       description: "Removes Google Books URLs from books (books.google.com)",
-      fields: ["url"],
-      patternType: "regex",
-      search: "https?://books\\.google\\.com/[^\\s]*",
+      conditions: [
+        { field: "url", pattern: "https?://books\\.google\\.com/[^\\s]*", patternType: "regex" }
+      ],
+      secondCondition: { field: "itemType", pattern: "book" },
       replace: "",
-      category: "Data Quality",
-      secondCondition: { field: "itemType", pattern: "book" }
+      category: "Data Quality"
     },
     {
       id: "remove-worldcat-urls",
       name: "Remove: WorldCat URLs",
       description: "Removes WorldCat URLs from books (www.worldcat.org)",
-      fields: ["url"],
-      patternType: "regex",
-      search: "https?://www\\.worldcat\\.org/[^\\s]*",
+      conditions: [
+        { field: "url", pattern: "https?://www\\.worldcat\\.org/[^\\s]*", patternType: "regex" }
+      ],
+      secondCondition: { field: "itemType", pattern: "book" },
       replace: "",
-      category: "Data Quality",
-      secondCondition: { field: "itemType", pattern: "book" }
+      category: "Data Quality"
     },
     // === Classification ===
     {
       id: "find-corporate-authors",
       name: "Find: Corporate Authors",
       description: "Find likely corporate/group authors in person fields",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$",
+      conditions: [
+        { field: "creator.lastName", pattern: "\\s+(Collaborators|Group|Association|Institute|Center|Society|Journal|Proceedings)\\s*$", patternType: "regex" }
+      ],
       replace: "",
       category: "Classification"
     },
@@ -947,9 +975,9 @@ if (typeof console === 'undefined') {
       id: "find-journal-in-author",
       name: "Find: Journal Name in Author",
       description: "Find items where journal name appears as author",
-      fields: ["creator.lastName"],
-      patternType: "regex",
-      search: "(Journal|Review|Proceedings|Transactions)",
+      conditions: [
+        { field: "creator.lastName", pattern: "(Journal|Review|Proceedings|Transactions)", patternType: "regex" }
+      ],
       replace: "",
       category: "Classification"
     }

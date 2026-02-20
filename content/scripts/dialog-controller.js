@@ -3,6 +3,14 @@
  * This script handles the HTML dialog UI interactions
  */
 
+// Text fields for "All Fields" search - all searchable text fields except dates and itemType
+const TEXT_FIELDS = [
+  'title', 'abstractNote', 'publicationTitle', 'publisher',
+  'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog',
+  'url', 'DOI', 'ISBN', 'ISSN', 'callNumber',
+  'creator.lastName', 'creator.firstName'
+];
+
 // Embedded patterns for standalone dialog access
 var EMBEDDED_PATTERNS = [
   { id: 'fix-jr-suffix', name: 'Fix: Move Jr/Sr Suffix', description: 'Moves "Jr" from given name to surname', search: '(.+), (Jr|Sr|III|II|IV)$', replace: '$2, $1', category: 'Parsing Errors', fields: ['creator.lastName', 'creator.firstName'] },
@@ -556,6 +564,8 @@ var ZoteroSearchDialog = {
 
   getAllFields: function() {
     return [
+      // Special: All Fields
+      { value: 'all', label: 'All Fields', fieldType: 'special' },
       // Core fields
       { value: 'title', label: 'Title', fieldType: 'text' },
       { value: 'abstractNote', label: 'Abstract', fieldType: 'text' },
@@ -624,6 +634,36 @@ var ZoteroSearchDialog = {
     }
   },
 
+  // Update Replace In dropdown with fields that had matches (for "All Fields" search)
+  // Adds "All matched fields" option at the top
+  updateReplaceFieldOptionsForMatchedFields: function(matchedFields) {
+    const replaceFieldSelect = this.elements.replaceFieldSelect;
+    if (!replaceFieldSelect || matchedFields.length === 0) return;
+
+    // Get field labels
+    const allFieldsMap = {};
+    this.getAllFields().forEach(f => allFieldsMap[f.value] = f.label);
+
+    replaceFieldSelect.innerHTML = '';
+
+    // Add "All matched fields" option first
+    const allOption = document.createElement('option');
+    allOption.value = '__all_matched__';
+    allOption.textContent = 'All matched fields (' + matchedFields.length + ')';
+    replaceFieldSelect.appendChild(allOption);
+
+    // Add each matched field as separate option
+    matchedFields.forEach(field => {
+      const option = document.createElement('option');
+      option.value = field;
+      option.textContent = allFieldsMap[field] || field;
+      replaceFieldSelect.appendChild(option);
+    });
+
+    // Default to "All matched fields"
+    replaceFieldSelect.value = '__all_matched__';
+  },
+
   // Perform search with multiple conditions
   performSearch: async function() {
     // Debug: show ALL conditions before filtering
@@ -642,11 +682,44 @@ var ZoteroSearchDialog = {
       return;
     }
 
-    // Add operators to conditions (first one is implicit AND)
-    const conditions = validConditions.map((c, i) => ({
-      ...c,
-      operator: i === 0 ? 'AND' : (c.operator || 'AND')
-    }));
+    // Expand "All Fields" to individual text fields
+    // If any condition has field: 'all', replace it with conditions for each text field
+    let expandedConditions = [];
+    validConditions.forEach((condition, index) => {
+      if (condition.field === 'all') {
+        // Expand 'all' to all text fields with OR between them
+        TEXT_FIELDS.forEach((field, fieldIndex) => {
+          expandedConditions.push({
+            ...condition,
+            field: field,
+            operator: fieldIndex === 0 ? 'AND' : 'OR'
+          });
+        });
+      } else {
+        expandedConditions.push(condition);
+      }
+    });
+
+    // Replace validConditions with expanded version
+    const conditionsToProcess = expandedConditions;
+
+    // Add operators to conditions
+    // For multiple fields with the SAME pattern, use OR (disjunctive search)
+    // This allows patterns like "empty creator lastName OR empty creator firstName"
+    // For different patterns, use AND (conjunctive search)
+    const conditions = conditionsToProcess.map((c, i) => {
+      if (i === 0) {
+        return { ...c, operator: 'AND' };
+      }
+      // Check if this condition has the same pattern as a previous one
+      // If so, use OR to match ANY field with this pattern
+      const prevCondition = conditionsToProcess[i - 1];
+      const samePattern = prevCondition && prevCondition.pattern === c.pattern;
+      return {
+        ...c,
+        operator: samePattern ? 'OR' : (c.operator || 'AND')
+      };
+    });
 
     // Add implicit collection scope if a collection is selected in Zotero's main window
     // This scopes the search to the currently selected collection
@@ -686,7 +759,24 @@ var ZoteroSearchDialog = {
       });
 
       this.state.results = results;
-      this.state.fields = conditions.map(c => c.field);
+
+      // Extract unique fields that actually had matches (for "All Fields" search UX)
+      const matchedFields = new Set();
+      for (const result of results) {
+        if (result.matchDetails) {
+          for (const detail of result.matchDetails) {
+            matchedFields.add(detail.field);
+          }
+        }
+      }
+      // Use matched fields if available (from "All Fields" search), otherwise use condition fields
+      this.state.fields = matchedFields.size > 0
+        ? [...matchedFields]
+        : conditions.map(c => c.field);
+
+      // Update replace dropdown to show which fields had matches
+      this.updateReplaceFieldOptionsForMatchedFields([...matchedFields]);
+
       this.renderResults();
 
     } catch (e) {
@@ -883,14 +973,19 @@ var ZoteroSearchDialog = {
 
     const firstResult = this.state.results[0];
     const searchPattern = condition.pattern;
-    const replacePattern = this.elements.replaceInput ? this.elements.replaceInput.value : '';
+    // Use state.replacePattern (can be function or string), fallback to input value for manual edits
+    const replacePattern = this.state.replacePattern !== undefined ? this.state.replacePattern : (this.elements.replaceInput ? this.elements.replaceInput.value : '');
     const patternType = condition.patternType || 'regex';
     const caseSensitive = condition.caseSensitive || false;
 
     // Determine which fields to preview
     let fieldsToPreview;
-    if (this.elements.replaceFieldSelect && this.elements.replaceFieldSelect.value) {
-      fieldsToPreview = [this.elements.replaceFieldSelect.value];
+    const replaceFieldValue = this.elements.replaceFieldSelect?.value;
+    if (replaceFieldValue && replaceFieldValue !== '__all_matched__') {
+      fieldsToPreview = [replaceFieldValue];
+    } else if (replaceFieldValue === '__all_matched__') {
+      // Preview all matched fields
+      fieldsToPreview = this.state.fields;
     } else {
       fieldsToPreview = this.state.fields;
     }
@@ -944,7 +1039,8 @@ var ZoteroSearchDialog = {
       .map(r => r.item);
 
     const searchPattern = condition.pattern;
-    const replacePattern = this.elements.replaceInput ? this.elements.replaceInput.value : '';
+    // Use state.replacePattern (can be function or string), fallback to input value for manual edits
+    const replacePattern = this.state.replacePattern !== undefined ? this.state.replacePattern : (this.elements.replaceInput ? this.elements.replaceInput.value : '');
     const patternType = condition.patternType || 'regex';
     const caseSensitive = condition.caseSensitive || false;
 
@@ -953,7 +1049,13 @@ var ZoteroSearchDialog = {
       this.showError('Please select which field to replace in (use "Replace In" dropdown)');
       return;
     }
-    const fieldsToReplace = [this.elements.replaceFieldSelect.value];
+    let fieldsToReplace;
+    if (this.elements.replaceFieldSelect.value === '__all_matched__') {
+      // Replace in all fields that had matches
+      fieldsToReplace = this.state.fields || [];
+    } else {
+      fieldsToReplace = [this.elements.replaceFieldSelect.value];
+    }
 
     if (!confirm(`Replace in ${selectedItems.length} items?`)) {
       return;
@@ -1138,53 +1240,99 @@ var ZoteroSearchDialog = {
             caseSensitive: false
           });
         }
-        const condition = this.state.conditions[0];
+        // Handle new format: pattern.conditions (array of condition objects)
+        if (pattern.conditions && pattern.conditions.length > 0) {
+          // Clear existing conditions and rebuild from pattern.conditions
+          this.state.conditions = [];
 
-        // Set condition values from pattern
-        condition.pattern = pattern.search || '';
-        if (pattern.fields && pattern.fields.length > 0) {
-          condition.field = pattern.fields[0];
-        }
-        if (pattern.patternType) {
-          condition.patternType = pattern.patternType;
-        }
+          // Add conditions from pattern.conditions array
+          // Preserve original operators - the engine handles OR detection
+          pattern.conditions.forEach((cond, index) => {
+            this.state.conditions.push({
+              operator: cond.operator || (index === 0 ? 'AND' : 'AND'),
+              field: cond.field,
+              pattern: cond.pattern || '',
+              patternType: cond.patternType || 'regex',
+              caseSensitive: false
+            });
+          });
 
-        // Handle second condition (e.g., itemType = book for URL patterns)
-        if (pattern.secondCondition) {
-          // Ensure we have at least 2 conditions
-          while (this.state.conditions.length < 2) {
+          // Handle second condition (e.g., itemType = book for URL patterns)
+          if (pattern.secondCondition) {
             this.state.conditions.push({
               operator: 'AND',
-              field: 'title',
-              pattern: '',
-              patternType: 'regex',
+              field: pattern.secondCondition.field,
+              pattern: pattern.secondCondition.pattern,
+              patternType: 'exact',
               caseSensitive: false
             });
           }
-          // Set second condition
-          this.state.conditions[1] = {
-            operator: 'AND',
-            field: pattern.secondCondition.field,
-            pattern: pattern.secondCondition.pattern,
-            patternType: 'exact',
-            caseSensitive: false
-          };
-        } else if (this.state.conditions.length > 1) {
-          // Remove extra conditions if no secondCondition
-          this.state.conditions.splice(1);
+
+          // Set replace field dropdown to first condition's field
+          if (this.elements.replaceFieldSelect) {
+            this.updateReplaceFieldOptions();
+            this.elements.replaceFieldSelect.value = pattern.conditions[0].field;
+          }
+        } else {
+          // Legacy format: single field/pattern
+          const condition = this.state.conditions[0];
+          condition.pattern = pattern.search || '';
+          if (pattern.fields && pattern.fields.length > 0) {
+            condition.field = pattern.fields[0];
+          }
+          if (pattern.patternType) {
+            condition.patternType = pattern.patternType;
+          }
+
+          // Handle patterns with multiple fields - create multiple conditions
+          if (pattern.fields && pattern.fields.length > 1) {
+            for (let i = 1; i < pattern.fields.length; i++) {
+              this.state.conditions.push({
+                operator: pattern.operator || 'OR',
+                field: pattern.fields[i],
+                pattern: pattern.search || '',
+                patternType: pattern.patternType || 'regex',
+                caseSensitive: false
+              });
+            }
+          }
+
+          // Handle second condition (e.g., itemType = book for URL patterns)
+          if (pattern.secondCondition) {
+            while (this.state.conditions.length < 2) {
+              this.state.conditions.push({
+                operator: 'AND',
+                field: 'title',
+                pattern: '',
+                patternType: 'regex',
+                caseSensitive: false
+              });
+            }
+            this.state.conditions[1] = {
+              operator: 'AND',
+              field: pattern.secondCondition.field,
+              pattern: pattern.secondCondition.pattern,
+              patternType: 'exact',
+              caseSensitive: false
+            };
+          } else if (this.state.conditions.length > 1) {
+            this.state.conditions.splice(1);
+          }
+
+          // Set Replace In dropdown - use first field from pattern
+          if (pattern.fields && pattern.fields.length > 0 && this.elements.replaceFieldSelect) {
+            const replaceField = pattern.fields[0];
+            this.updateReplaceFieldOptions();
+            this.elements.replaceFieldSelect.value = replaceField;
+          }
         }
 
-        // Set replace input
+        // Set replace input and state
+        // Store the actual replace pattern (can be function or string) in state
+        this.state.replacePattern = pattern.replace;
         if (this.elements.replaceInput) {
+          // Display empty for functions (can't display function in input), actual value is in state
           this.elements.replaceInput.value = typeof pattern.replace === 'function' ? '' : (pattern.replace || '');
-        }
-
-        // Set Replace In dropdown - use first field from pattern
-        if (pattern.fields && pattern.fields.length > 0 && this.elements.replaceFieldSelect) {
-          const replaceField = pattern.fields[0];
-          // Populate and select the field
-          this.updateReplaceFieldOptions();
-          this.elements.replaceFieldSelect.value = replaceField;
         }
 
         // Re-render conditions to show the updated values
