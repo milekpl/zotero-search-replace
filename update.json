@@ -3,8 +3,15 @@
     "zotero-search-replace@marcinmilkowski.pl": {
       "updates": [
         {
-          "version": "0.1.0",
-          "update_link": "https://raw.githubusercontent.com/milekpl/zotero-search-replace/main/update.json"
+          "version": "0.2.1",
+          "update_link": "https://github.com/milekpl/zotero-search-replace/releases/download/v0.2.1/zotero-search-and-replace-plugin-with-regex-support-and-preloaded-data-quality-patterns.xpi",
+          "update_hash": "sha512:24f0aedae41338d476b3b72b68b0761c749b6153bfc44c81c9ac3d45051b4df2f3c952c4213dde2c1ff7cc6954705d45a09bd85aa278341358368aa48b3c45da",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "7.0",
+              "strict_max_version": "9.*"
+            }
+          }
         }
       ]
     }
