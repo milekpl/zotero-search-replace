@@ -144,7 +144,7 @@ export const DATA_QUALITY_PATTERNS = [
     conditions: [
       { field: 'creator.lastName', pattern: '\\b[Mm][Aa][Cc][A-Za-z]*', patternType: 'regex' }
     ],
-    replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.charAt(2).toUpperCase() + m.slice(3).toLowerCase(),
+    replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3, 4).toUpperCase() + m.slice(4).toLowerCase(),
     category: 'Capitalization'
   },
 

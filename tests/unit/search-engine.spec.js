@@ -70,6 +70,10 @@ describe('SearchEngine', () => {
       expect(engine.buildSearchTerm('test')).toBe('test');
     });
 
+    it('should skip Phase 1 when no safe literal exists', () => {
+      expect(engine.buildSearchTerm(String.raw`\s+:`)).toBeNull();
+    });
+
     it('should remove anchors from pattern', () => {
       expect(engine.buildSearchTerm('^test')).toBe('test');
       expect(engine.buildSearchTerm('test$')).toBe('test');
@@ -254,6 +258,16 @@ describe('SearchEngine', () => {
       expect(result.matched).toBe(false);
     });
 
+    it('should match dialog-style mixed AND/OR conditions', () => {
+      const item = createMockItem('Hello World', 'https://example.com');
+      const conditions = [
+        { pattern: 'missing', field: 'title', patternType: 'regex', caseSensitive: false, operator: 'AND' },
+        { pattern: 'example', field: 'url', patternType: 'regex', caseSensitive: false, operator: 'OR' }
+      ];
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+    });
+
     it('should match AND NOT - positive matches, negative does not match', () => {
       const item = createMockItem('Hello World', 'https://example.com');
       const conditions = [
@@ -292,6 +306,39 @@ describe('SearchEngine', () => {
       ];
       const result = engine.evaluateConditions(item, conditions);
       expect(result.matched).toBe(true);
+    });
+
+    it('should match all-field conditions against any searchable text field', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn((field) => {
+          if (field === 'publisher') return 'Needle Press';
+          return '';
+        }),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const conditions = [
+        { pattern: 'needle', field: 'all', patternType: 'contains', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('publisher');
+    });
+
+    it('should match truly empty titles with the whitespace-empty regex preset', () => {
+      const item = createMockItem('', 'https://example.com');
+      const conditions = [
+        { pattern: String.raw`^\s*$`, field: 'title', patternType: 'regex', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('title');
     });
   });
 
@@ -388,6 +435,103 @@ describe('SearchEngine', () => {
       expect(results.length).toBe(1);
       expect(mockItem.getField).toHaveBeenCalledWith('title');
       expect(results[0].matchedFields).toContain('title');
+    });
+
+    it('should search across multiple legacy fields with OR semantics', async () => {
+      const mockItem = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn((field) => {
+          if (field === 'title') return 'No title match';
+          if (field === 'abstractNote') return 'This abstract has Needle inside';
+          return '';
+        }),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      mockZotero.Items.getAsync = jest.fn().mockResolvedValue([mockItem]);
+      mockZotero.Search = jest.fn().mockImplementation(() => ({
+        libraryID: 1,
+        addCondition: jest.fn(),
+        search: jest.fn().mockResolvedValue([1])
+      }));
+
+      const results = await engine.search('needle', {
+        fields: ['title', 'abstractNote'],
+        patternType: 'contains',
+        caseSensitive: false
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].matchedFields).toContain('abstractNote');
+    });
+
+    it('should use Phase 1 for regex patterns with extractable literals', async () => {
+      const mockItem = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn().mockReturnValue('Needle in a haystack'),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const searches = [];
+      mockZotero.Items.getAsync = jest.fn().mockResolvedValue([mockItem]);
+      mockZotero.Search = jest.fn().mockImplementation(() => {
+        const search = {
+          libraryID: 1,
+          addCondition: jest.fn(),
+          search: jest.fn().mockResolvedValue([1])
+        };
+        searches.push(search);
+        return search;
+      });
+
+      const results = await engine.search('Needle.*hay', {
+        fields: ['title'],
+        patternType: 'regex',
+        caseSensitive: false
+      });
+
+      expect(results).toHaveLength(1);
+      expect(searches).toHaveLength(1);
+      expect(searches[0].addCondition).toHaveBeenCalledWith('title', 'contains', 'Needle');
+    });
+
+    it('should skip Phase 1 for regex patterns without extractable literals', async () => {
+      const mockItem = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn().mockReturnValue('Title : Subtitle'),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const searches = [];
+      mockZotero.Items.getAsync = jest.fn().mockResolvedValue([mockItem]);
+      mockZotero.Search = jest.fn().mockImplementation(() => {
+        const search = {
+          libraryID: 1,
+          addCondition: jest.fn(),
+          search: jest.fn().mockResolvedValue([1])
+        };
+        searches.push(search);
+        return search;
+      });
+
+      const results = await engine.search(String.raw`\s+:`, {
+        fields: ['title'],
+        patternType: 'regex',
+        caseSensitive: false
+      });
+
+      expect(results).toHaveLength(1);
+      expect(searches).toHaveLength(1);
+      expect(searches[0].addCondition).not.toHaveBeenCalled();
     });
 
     it('should NOT match regex metacharacters in exact match mode', async () => {
@@ -567,6 +711,28 @@ describe('SearchEngine field matching', () => {
     it('should match publisher field', () => {
       expect(engine.matches('Springer Verlag', 'Springer', 'contains', false)).toBe(true);
       expect(engine.matches('Oxford University Press', 'Oxford', 'contains', false)).toBe(true);
+    });
+
+    it('should match creator full names composed from first and last names', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn().mockReturnValue(null),
+        getCreators: jest.fn().mockReturnValue([
+          { firstName: 'John', lastName: 'Doe', creatorType: 1 }
+        ]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const result = engine.matchItem(item, 'John Doe', {
+        fields: ['creator.fullName'],
+        patternType: 'exact',
+        caseSensitive: false
+      });
+
+      expect(result.matchedFields).toEqual(['creator.fullName']);
+      expect(result.matchDetails[0].value).toBe('John Doe');
     });
 
     it('should handle empty/null fields gracefully', () => {

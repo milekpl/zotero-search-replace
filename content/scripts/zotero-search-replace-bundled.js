@@ -23,6 +23,65 @@ if (typeof console === 'undefined') {
     CONTAINS: "contains"
     // Substring match (contains anywhere)
   };
+  var SEARCH_FIELDS = {
+    // Core fields
+    TITLE: "title",
+    ABSTRACT: "abstractNote",
+    DATE: "date",
+    DATE_ADDED: "dateAdded",
+    DATE_MODIFIED: "dateModified",
+    // Creator fields
+    CREATOR_FIRST: "firstName",
+    CREATOR_LAST: "lastName",
+    CREATOR_FULL: "fullName",
+    // Publication fields
+    PUBLICATION: "publicationTitle",
+    PUBLISHER: "publisher",
+    VOLUME: "volume",
+    ISSUE: "issue",
+    PAGES: "pages",
+    // Identifier fields
+    DOI: "DOI",
+    ISBN: "ISBN",
+    ISSN: "ISSN",
+    URL: "url",
+    // Other fields
+    TAGS: "tags",
+    CALL_NUMBER: "callNumber",
+    EXTRA: "extra",
+    ITEM_TYPE: "itemType",
+    // Collection/Search
+    COLLECTION: "collection",
+    SAVED_SEARCH: "savedSearch",
+    // Notes
+    NOTE: "note",
+    CHILD_NOTE: "childNote",
+    // Attachments
+    ATTACHMENT_CONTENT: "attachmentContent",
+    ATTACHMENT_FILE_TYPE: "attachmentFileType",
+    // Annotations
+    ANNOTATION_TEXT: "annotationText",
+    ANNOTATION_COMMENT: "annotationComment",
+    // Location fields (Books)
+    PLACE: "place",
+    ARCHIVE_LOCATION: "archiveLocation",
+    LIBRARY_CATALOG: "libraryCatalog",
+    // Item-type specific
+    THESIS_TYPE: "thesisType",
+    REPORT_TYPE: "reportType",
+    VIDEO_FORMAT: "videoRecordingFormat",
+    AUDIO_FILE_TYPE: "audioFileType",
+    AUDIO_RECORDING_FORMAT: "audioRecordingFormat",
+    LETTER_TYPE: "letterType",
+    INTERVIEW_MEDIUM: "interviewMedium",
+    MANUSCRIPT_TYPE: "manuscriptType",
+    PRESENTATION_TYPE: "presentationType",
+    MAP_TYPE: "mapType",
+    ARTWORK_MEDIUM: "artworkMedium",
+    PROGRAMMING_LANGUAGE: "programmingLanguage",
+    // Special
+    ANY_FIELD: "anyField"
+  };
   var FIELDS_WITH_CONTAINS = [
     "title",
     "abstractNote",
@@ -41,6 +100,42 @@ if (typeof console === 'undefined') {
     "annotationText",
     "annotationComment"
   ];
+  var ALL_TEXT_FIELDS = [
+    "title",
+    "abstractNote",
+    "publicationTitle",
+    "publisher",
+    "note",
+    "extra",
+    "place",
+    "archiveLocation",
+    "libraryCatalog",
+    "url",
+    "DOI",
+    "ISBN",
+    "ISSN",
+    "callNumber",
+    "creator.lastName",
+    "creator.firstName"
+  ];
+  var ANY_FIELD_ALIASES = /* @__PURE__ */ new Set(["all", SEARCH_FIELDS.ANY_FIELD]);
+  var DATE_FIELDS = /* @__PURE__ */ new Set(["date", "dateAdded", "dateModified"]);
+  var NOTE_FIELDS = /* @__PURE__ */ new Set(["note", "childNote"]);
+  var ITEM_TYPE_SPECIFIC_FIELDS = /* @__PURE__ */ new Set([
+    "thesisType",
+    "reportType",
+    "videoRecordingFormat",
+    "audioFileType",
+    "audioRecordingFormat",
+    "letterType",
+    "interviewMedium",
+    "manuscriptType",
+    "presentationType",
+    "mapType",
+    "artworkMedium",
+    "programmingLanguage"
+  ]);
+  var PHASE1_IS_FIELDS = /* @__PURE__ */ new Set(["itemType", "collection", "savedSearch", "volume", "issue", "pages", "attachmentFileType"]);
   var SearchResult = class {
     constructor(item, matchedFields = [], matchDetails = []) {
       this.item = item;
@@ -82,135 +177,129 @@ if (typeof console === 'undefined') {
       const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\*/g, "*").replace(/\\\?/g, "?");
       return `*${escaped}*`;
     }
-    // Build a simpler search term for Phase 1 (Zotero "contains" search)
-    // For regex patterns, we try to extract a simple literal substring for initial filtering
-    // Returns null to signal that Phase 1 should be skipped (for empty-field patterns like ^$)
-    buildSearchTerm(pattern) {
+    // Build a simpler search term for Phase 1 (Zotero "contains" search).
+    // Returns null when we can't derive a safe literal prefilter.
+    buildSearchTerm(pattern, patternType = PATTERN_TYPES.REGEX) {
       if (!pattern || typeof pattern !== "string") {
         return pattern;
       }
+      if (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS) {
+        return pattern;
+      }
       let searchTerm = pattern;
-      if (/^\^?\$?\s*\$?$/.test(pattern) || /^\^\\s*\$/.test(pattern)) {
+      if (this.isEmptyFieldPattern(pattern, patternType)) {
         return null;
       }
-      if (searchTerm.startsWith("^")) {
-        searchTerm = searchTerm.slice(1);
+      if (patternType === PATTERN_TYPES.REGEX) {
+        if (searchTerm.startsWith("^")) {
+          searchTerm = searchTerm.slice(1);
+        }
+        if (searchTerm.endsWith("$")) {
+          searchTerm = searchTerm.slice(0, -1);
+        }
+        searchTerm = searchTerm.replace(/\?\*/g, "*");
+        searchTerm = searchTerm.replace(/\?\+/g, "+");
+        searchTerm = searchTerm.replace(/\?\?/g, "?");
+        searchTerm = searchTerm.replaceAll(/.\?/g, "");
+        searchTerm = searchTerm.replaceAll(/\*\?/g, "");
+        searchTerm = searchTerm.replaceAll(/\+\?/g, "");
       }
-      if (searchTerm.endsWith("$")) {
-        searchTerm = searchTerm.slice(0, -1);
-      }
-      searchTerm = searchTerm.replace(/\?\*/g, "*");
-      searchTerm = searchTerm.replace(/\?\+/g, "+");
-      searchTerm = searchTerm.replace(/\?\?/g, "?");
-      searchTerm = searchTerm.replace(/.\?/g, "");
-      searchTerm = searchTerm.replace(/\*\?/g, "");
-      searchTerm = searchTerm.replace(/\+\?/g, "");
       const literals = searchTerm.match(/[a-zA-Z0-9]{2,}/g) || [];
       if (literals.length > 0) {
         return literals.reduce((a, b) => a.length >= b.length ? a : b);
       }
-      let cleanPattern = searchTerm;
-      if (cleanPattern.startsWith("^")) cleanPattern = cleanPattern.slice(1);
-      if (cleanPattern.endsWith("$")) cleanPattern = cleanPattern.slice(0, -1);
-      return cleanPattern || pattern;
+      return null;
+    }
+    isEmptyFieldPattern(pattern, patternType) {
+      return patternType === PATTERN_TYPES.REGEX && typeof pattern === "string" && /^\^(?:\\s\*)?\$$/.test(pattern);
+    }
+    getMatchLength(match, patternType) {
+      if (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS) {
+        return String(match).length;
+      }
+      return match?.[0] ? match[0].length : 0;
+    }
+    getMatchIndex(value, match, pattern, patternType, caseSensitive) {
+      if (patternType === PATTERN_TYPES.EXACT) {
+        return 0;
+      }
+      if (patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.SQL_LIKE || patternType === PATTERN_TYPES.SQL_GLOB) {
+        return typeof match.index === "number" ? match.index : 0;
+      }
+      const haystack = caseSensitive ? value : value.toLowerCase();
+      const needle = caseSensitive ? pattern : pattern.toLowerCase();
+      return haystack.indexOf(needle);
+    }
+    getCreatorFullName(creator) {
+      if (!creator) {
+        return "";
+      }
+      const singleFieldName = creator.name == null ? "" : String(creator.name).trim();
+      if (singleFieldName) {
+        return singleFieldName;
+      }
+      return [creator.firstName, creator.lastName].filter((part) => part != null && String(part).trim() !== "").map((part) => String(part).trim()).join(" ");
+    }
+    getPhase1Term(pattern, patternType = PATTERN_TYPES.REGEX) {
+      return this.buildSearchTerm(pattern, patternType);
+    }
+    getPhase1Candidate(conditions) {
+      const candidates = conditions.filter((condition) => condition.operator !== "AND_NOT" && condition.operator !== "OR_NOT").filter((condition) => condition.pattern).filter((condition) => !(condition.patternType === PATTERN_TYPES.REGEX && condition.pattern.includes("|"))).map((condition) => ({
+        condition,
+        term: this.getPhase1Term(condition.pattern, condition.patternType || PATTERN_TYPES.REGEX)
+      })).filter(({ condition, term }) => term !== null && this._canAddCondition(condition.field, condition.pattern, condition.patternType));
+      if (candidates.length === 0) {
+        return null;
+      }
+      return candidates.reduce((best, candidate) => {
+        if (!best || candidate.term.length > best.term.length) {
+          return candidate;
+        }
+        return best;
+      }, null);
     }
     // Add search condition for a field
-    addSearchCondition(search, field, pattern) {
-      if (pattern === null) {
+    addSearchCondition(search, field, pattern, patternType = PATTERN_TYPES.REGEX) {
+      if (pattern === null || ANY_FIELD_ALIASES.has(field) || DATE_FIELDS.has(field) || ITEM_TYPE_SPECIFIC_FIELDS.has(field)) {
         return;
       }
-      if (field === "tags") {
-        search.addCondition("tag", "contains", pattern);
+      const containsField = this.getPhase1ContainsField(field);
+      if (containsField) {
+        this.addPhase1ContainsCondition(search, containsField, pattern, patternType);
         return;
       }
-      if (field.startsWith("creator.")) {
-        const term = this.buildSearchTerm(pattern);
-        if (term === null) return;
-        search.addCondition("creator", "contains", term);
-        return;
-      }
-      if (field === "date" || field === "dateAdded" || field === "dateModified") {
-        return;
-      }
-      if (FIELDS_WITH_CONTAINS.includes(field)) {
-        const term = this.buildSearchTerm(pattern);
-        if (term === null) return;
-        search.addCondition(field, "contains", term);
-        return;
-      }
-      if (field === "itemType") {
-        search.addCondition("itemType", "is", pattern);
-        return;
-      }
-      if (field === "collection") {
-        search.addCondition("collection", "is", pattern);
-        return;
-      }
-      if (field === "savedSearch") {
-        search.addCondition("savedSearch", "is", pattern);
-        return;
-      }
-      if (field === "note" || field === "childNote") {
-        search.addCondition("note", "contains", pattern);
-        return;
-      }
-      if (field === "volume" || field === "issue" || field === "pages") {
+      if (PHASE1_IS_FIELDS.has(field)) {
         search.addCondition(field, "is", pattern);
-        return;
-      }
-      if (field === "attachmentContent") {
-        search.addCondition("attachmentContent", "contains", pattern);
-        return;
-      }
-      if (field === "attachmentFileType") {
-        search.addCondition("attachmentFileType", "is", pattern);
-        return;
-      }
-      if (field === "annotationText" || field === "annotationComment") {
-        search.addCondition(field, "contains", pattern);
-        return;
-      }
-      const itemTypeFields = [
-        "thesisType",
-        "reportType",
-        "videoRecordingFormat",
-        "audioFileType",
-        "audioRecordingFormat",
-        "letterType",
-        "interviewMedium",
-        "manuscriptType",
-        "presentationType",
-        "mapType",
-        "artworkMedium",
-        "programmingLanguage"
-      ];
-      if (itemTypeFields.includes(field)) {
         return;
       }
       console.log("SearchReplace: Skipping unknown field:", field);
     }
+    getPhase1ContainsField(field) {
+      if (field === "tags") {
+        return "tag";
+      }
+      if (field.startsWith("creator.")) {
+        return "creator";
+      }
+      if (FIELDS_WITH_CONTAINS.includes(field)) {
+        return field;
+      }
+      if (NOTE_FIELDS.has(field) || field === "attachmentContent" || field === "annotationText" || field === "annotationComment") {
+        return field === "childNote" ? "note" : field;
+      }
+      return null;
+    }
+    addPhase1ContainsCondition(search, field, pattern, patternType) {
+      const term = this.getPhase1Term(pattern, patternType);
+      if (term === null) {
+        return;
+      }
+      search.addCondition(field, "contains", term);
+    }
     // Main search method - TWO PHASE
     // Supports either single pattern (backward compatible) or array of conditions
     async search(patternOrConditions, options = {}) {
-      let conditions = [];
-      if (Array.isArray(patternOrConditions)) {
-        conditions = patternOrConditions;
-      } else if (typeof patternOrConditions === "string") {
-        const {
-          fields: fields2 = ["title", "abstractNote", "creator.lastName", "creator.firstName", "tags", "url"],
-          patternType = PATTERN_TYPES.REGEX,
-          caseSensitive = false
-        } = options;
-        conditions = [{
-          pattern: patternOrConditions,
-          field: fields2[0] || "title",
-          fields: fields2,
-          patternType,
-          caseSensitive,
-          operator: "AND"
-          // First condition, implicit AND
-        }];
-      }
+      const conditions = this.normalizeSearchConditions(patternOrConditions, options);
       if (conditions.length === 0) {
         return [];
       }
@@ -219,54 +308,90 @@ if (typeof console === 'undefined') {
         progressCallback = () => {
         }
       } = options;
-      for (const condition of conditions) {
-        this.validatePattern(condition.pattern, condition.patternType || PATTERN_TYPES.REGEX);
-      }
-      const allFields = [...new Set(conditions.map((c) => c.field).filter((f) => f))];
-      const fields = allFields.length > 0 ? allFields : ["title"];
-      const hasRegexCondition = conditions.some((c) => c.patternType === PATTERN_TYPES.REGEX);
-      const PHASE1_FIELD_THRESHOLD = 5;
-      let skipPhase1 = fields.length > PHASE1_FIELD_THRESHOLD;
-      if (hasRegexCondition) {
-        skipPhase1 = true;
-      }
-      const hasNotConditions = conditions.some((c) => c.operator === "AND_NOT" || c.operator === "OR_NOT");
-      if (hasNotConditions) {
-        skipPhase1 = true;
-      }
-      let itemIDs = [];
+      this.validateConditions(conditions);
+      const fields = this.getConditionFields(conditions);
+      let skipPhase1 = this.shouldSkipPhase1(fields, conditions);
+      let phase1Candidate = null;
       if (!skipPhase1) {
-        const search = new Zotero.Search();
-        search.libraryID = libraryID;
-        const phase1Condition = conditions.find(
-          (c) => c.operator !== "AND_NOT" && c.operator !== "OR_NOT" && c.pattern && !c.pattern.includes("|")
-        );
-        if (phase1Condition && this._canAddCondition(phase1Condition.field, phase1Condition.pattern)) {
-          this.addSearchCondition(search, phase1Condition.field, phase1Condition.pattern);
-          itemIDs = await search.search();
-          progressCallback({ phase: "filter", count: itemIDs.length });
-          if (itemIDs.length === 0) {
-            return [];
-          }
-        } else {
+        phase1Candidate = this.getPhase1Candidate(conditions);
+        if (!phase1Candidate) {
           skipPhase1 = true;
         }
       }
-      if (skipPhase1) {
-        progressCallback({ phase: "filter", count: "fetching all items..." });
-        const search = new Zotero.Search();
-        search.libraryID = libraryID;
-        itemIDs = await search.search();
-        progressCallback({ phase: "filter", count: itemIDs.length });
-        if (itemIDs.length === 0) {
-          return [];
-        }
+      const itemIDs = skipPhase1 ? await this.fetchAllItemIDs(libraryID, progressCallback) : await this.runPhase1Search(libraryID, phase1Candidate, progressCallback);
+      if (itemIDs.length === 0) {
+        return [];
       }
+      return this.buildSearchResults(itemIDs, conditions, progressCallback);
+    }
+    normalizeSearchConditions(patternOrConditions, options = {}) {
+      if (Array.isArray(patternOrConditions)) {
+        return patternOrConditions;
+      }
+      if (typeof patternOrConditions !== "string") {
+        return [];
+      }
+      return this.createLegacyConditions(patternOrConditions, options);
+    }
+    createLegacyConditions(pattern, options = {}) {
+      const {
+        fields = ["title", "abstractNote", "creator.lastName", "creator.firstName", "tags", "url"],
+        patternType = PATTERN_TYPES.REGEX,
+        caseSensitive = false
+      } = options;
+      const legacyFields = fields.length > 0 ? fields : ["title"];
+      return legacyFields.map((field, index) => ({
+        pattern,
+        field,
+        fields: legacyFields,
+        patternType,
+        caseSensitive,
+        operator: index === 0 ? "AND" : "OR"
+      }));
+    }
+    validateConditions(conditions) {
+      for (const condition of conditions) {
+        this.validatePattern(condition.pattern, condition.patternType || PATTERN_TYPES.REGEX);
+      }
+    }
+    getConditionFields(conditions) {
+      const allFields = [...new Set(conditions.map((condition) => condition.field).filter(Boolean))];
+      return allFields.length > 0 ? allFields : ["title"];
+    }
+    shouldSkipPhase1(fields, conditions) {
+      const PHASE1_FIELD_THRESHOLD = 5;
+      if (fields.length > PHASE1_FIELD_THRESHOLD) {
+        return true;
+      }
+      return conditions.some((condition) => condition.operator === "AND_NOT" || condition.operator === "OR_NOT");
+    }
+    async runPhase1Search(libraryID, phase1Candidate, progressCallback) {
+      const search = new Zotero.Search();
+      search.libraryID = libraryID;
+      this.addSearchCondition(
+        search,
+        phase1Candidate.condition.field,
+        phase1Candidate.condition.pattern,
+        phase1Candidate.condition.patternType
+      );
+      const itemIDs = await search.search();
+      progressCallback({ phase: "filter", count: itemIDs.length });
+      return itemIDs;
+    }
+    async fetchAllItemIDs(libraryID, progressCallback) {
+      progressCallback({ phase: "filter", count: "fetching all items..." });
+      const search = new Zotero.Search();
+      search.libraryID = libraryID;
+      const itemIDs = await search.search();
+      progressCallback({ phase: "filter", count: itemIDs.length });
+      return itemIDs;
+    }
+    async buildSearchResults(itemIDs, conditions, progressCallback) {
       const items = await Zotero.Items.getAsync(itemIDs);
       const results = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        progressCallback({ phase: "refine", current: i + 1, total: items.length });
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+        progressCallback({ phase: "refine", current: index + 1, total: items.length });
         const { matched, matchedFields, matchDetails } = this.evaluateConditions(item, conditions);
         if (matched) {
           results.push(new SearchResult(item, matchedFields, matchDetails));
@@ -289,8 +414,6 @@ if (typeof console === 'undefined') {
         return { matched: matchedFields2.length > 0, matchedFields: matchedFields2, matchDetails: matchDetails2 };
       }
       const results = [];
-      let allMatched = true;
-      let anyMatched = false;
       let matchedFields = [];
       let matchDetails = [];
       for (let i = 0; i < conditions.length; i++) {
@@ -306,49 +429,34 @@ if (typeof console === 'undefined') {
           matchedFields = matchedFields.concat(mf);
           matchDetails = matchDetails.concat(md);
         }
-        if (!conditionMatched) {
-          allMatched = false;
-        }
-        if (conditionMatched) {
-          anyMatched = true;
-        }
       }
-      let matched = false;
-      const positiveConditions = conditions.filter((c) => c.operator !== "AND_NOT" && c.operator !== "OR_NOT");
-      const notConditions = conditions.filter((c) => c.operator === "AND_NOT" || c.operator === "OR_NOT");
-      const positiveResults = results.slice(0, positiveConditions.length);
-      const anyPositiveMatched = positiveResults.some((r) => r);
-      let notMatched = false;
-      for (let i = 0; i < notConditions.length; i++) {
-        const notIdx = positiveConditions.length + i;
-        if (results[notIdx]) {
-          notMatched = true;
-          break;
+      let matched = results[0];
+      for (let i = 1; i < conditions.length; i++) {
+        const operator = conditions[i].operator || "AND";
+        const conditionMatched = results[i];
+        if (operator === "AND") {
+          matched = matched && conditionMatched;
+        } else if (operator === "OR") {
+          matched = matched || conditionMatched;
+        } else if (operator === "AND_NOT") {
+          matched = matched && !conditionMatched;
+        } else if (operator === "OR_NOT") {
+          matched = matched || !conditionMatched;
         }
-      }
-      const firstOp = conditions[0].operator || "AND";
-      const allPositiveMatched = positiveResults.every((r) => r);
-      if (firstOp === "AND") {
-        matched = allPositiveMatched && !notMatched;
-      } else if (firstOp === "OR") {
-        matched = anyPositiveMatched && !notMatched;
-      } else if (firstOp === "AND_NOT") {
-        matched = allMatched && !results[0];
-      } else if (firstOp === "OR_NOT") {
-        matched = (anyMatched || allMatched) && !results[0];
       }
       return { matched, matchedFields, matchDetails };
     }
     // Check if a field can have a condition added (for Phase 1 filtering)
-    _canAddCondition(field, pattern) {
+    _canAddCondition(field, pattern, patternType = PATTERN_TYPES.REGEX) {
       if (pattern === null) return false;
-      if (field === "tags") return true;
-      if (field.startsWith("creator.")) return true;
+      if (ANY_FIELD_ALIASES.has(field)) return false;
+      if (field === "tags") return this.getPhase1Term(pattern, patternType) !== null;
+      if (field.startsWith("creator.")) return this.getPhase1Term(pattern, patternType) !== null;
       if (field === "date" || field === "dateAdded" || field === "dateModified") return false;
-      if (FIELDS_WITH_CONTAINS.includes(field)) return true;
+      if (FIELDS_WITH_CONTAINS.includes(field)) return this.getPhase1Term(pattern, patternType) !== null;
       if (field === "itemType") return true;
       if (field === "collection") return true;
-      if (field === "note" || field === "childNote") return true;
+      if (field === "note" || field === "childNote") return this.getPhase1Term(pattern, patternType) !== null;
       if (field === "volume" || field === "issue" || field === "pages") return true;
       return false;
     }
@@ -357,131 +465,202 @@ if (typeof console === 'undefined') {
       const { fields, patternType, caseSensitive = false } = options;
       const matchedFields = [];
       const matchDetails = [];
+      const emptyFieldPattern = this.isEmptyFieldPattern(pattern, patternType);
       for (const field of fields) {
-        let value;
-        if (field.startsWith("creator.")) {
-          const creators = item.getCreators();
-          if (!creators || creators.length === 0) continue;
-          const creatorField = field.split(".")[1];
-          for (const creator of creators) {
-            if (creatorField === "fullName") {
-              value = creator.name;
-            } else {
-              value = creator[creatorField];
-            }
-            if (patternType === PATTERN_TYPES.REGEX && pattern === "^$") {
-              if (!value || value === "") {
-                matchedFields.push(field);
-                matchDetails.push({ field, value: "", matchIndex: 0, matchLength: 0 });
-                break;
-              }
-              continue;
-            }
-            const { match } = this.testValue(value, pattern, patternType, caseSensitive);
-            if (value && match !== null) {
-              matchedFields.push(field);
-              const matchLength = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS ? match ? pattern.length : 0 : match.length || String(value).length;
-              const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS ? patternType === PATTERN_TYPES.EXACT ? 0 : match ? value.indexOf(pattern) : 0 : 0;
-              matchDetails.push({ field, value, matchIndex, matchLength });
-              break;
-            }
-          }
-        } else if (field === "tags") {
-          const tags = item.getTags();
-          for (const tag of tags) {
-            const { match } = this.testValue(tag.name, pattern, patternType, caseSensitive);
-            if (match !== null) {
-              matchedFields.push(field);
-              matchDetails.push({ field, value: tag.name, matchIndex: -1, matchLength: -1 });
-              break;
-            }
-          }
-        } else if (field === "itemType") {
-          const itemTypeID = item.itemTypeID;
-          let itemTypeName = null;
-          if (typeof Zotero !== "undefined" && Zotero.ItemTypes) {
-            itemTypeName = Zotero.ItemTypes.getName(itemTypeID);
-          }
-          if (!itemTypeName) {
-            itemTypeName = item.getField("itemType");
-          }
-          const { match } = this.testValue(itemTypeName, pattern, patternType, caseSensitive);
-          if (match !== null) {
-            matchedFields.push(field);
-            matchDetails.push({ field, value: itemTypeName, matchIndex: 0, matchLength: itemTypeName.length });
-          }
-        } else if (field === "collection") {
-          const collectionID = parseInt(pattern, 10);
-          if (!isNaN(collectionID)) {
-            try {
-              const collections = item.getCollections();
-              if (collections && collections.includes(collectionID)) {
-                matchedFields.push(field);
-                matchDetails.push({ field, value: "collection:" + collectionID, matchIndex: 0, matchLength: String(collectionID).length });
-              }
-            } catch (e) {
-            }
-          }
-        } else {
-          try {
-            value = item.getField(field);
-          } catch (e) {
-            continue;
-          }
-          if (patternType === PATTERN_TYPES.REGEX && pattern === "^$") {
-            if (!value || value === "") {
-              matchedFields.push(field);
-              matchDetails.push({ field, value: "", matchIndex: 0, matchLength: 0 });
-              continue;
-            }
-          }
-          const { match } = this.testValue(value, pattern, patternType, caseSensitive);
-          if (value && match !== null) {
-            matchedFields.push(field);
-            const matchLength = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS ? match ? pattern.length : 0 : match.length || String(value).length;
-            const matchIndex = patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.REGEX || patternType === PATTERN_TYPES.CONTAINS ? patternType === PATTERN_TYPES.EXACT ? 0 : match ? value.indexOf(pattern) : 0 : 0;
-            matchDetails.push({ field, value, matchIndex, matchLength });
-          }
-        }
+        const fieldResult = this.matchField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern, options);
+        matchedFields.push(...fieldResult.matchedFields);
+        matchDetails.push(...fieldResult.matchDetails);
       }
       return { matchedFields, matchDetails };
     }
+    matchField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern, options) {
+      if (ANY_FIELD_ALIASES.has(field)) {
+        return this.matchItem(item, pattern, {
+          ...options,
+          fields: ALL_TEXT_FIELDS
+        });
+      }
+      if (field.startsWith("creator.")) {
+        return this.matchCreatorField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern);
+      }
+      if (field === "tags") {
+        return this.matchTagsField(item, field, pattern, patternType, caseSensitive);
+      }
+      if (field === "itemType") {
+        return this.matchItemTypeField(item, field, pattern, patternType, caseSensitive);
+      }
+      if (field === "collection") {
+        return this.matchCollectionField(item, field, pattern);
+      }
+      return this.matchStandardField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern);
+    }
+    createFieldMatch(field, detail) {
+      if (!detail) {
+        return { matchedFields: [], matchDetails: [] };
+      }
+      return { matchedFields: [field], matchDetails: [detail] };
+    }
+    buildMatchDetail(field, value, matchIndex, matchLength) {
+      return { field, value, matchIndex, matchLength };
+    }
+    getFieldMatchDetail(field, value, pattern, patternType, caseSensitive, emptyFieldPattern) {
+      const normalizedValue = value == null ? "" : String(value);
+      if (emptyFieldPattern) {
+        if (/^\s*$/.test(normalizedValue)) {
+          return this.buildMatchDetail(field, normalizedValue, 0, normalizedValue.length);
+        }
+        return null;
+      }
+      if (value === null || value === void 0) {
+        return null;
+      }
+      const { match } = this.testValue(normalizedValue, pattern, patternType, caseSensitive);
+      if (match === null) {
+        return null;
+      }
+      return this.buildMatchDetail(
+        field,
+        normalizedValue,
+        this.getMatchIndex(normalizedValue, match, pattern, patternType, caseSensitive),
+        this.getMatchLength(match, patternType)
+      );
+    }
+    matchCreatorField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern) {
+      const creators = item.getCreators();
+      if (!creators || creators.length === 0) {
+        return { matchedFields: [], matchDetails: [] };
+      }
+      const creatorField = field.split(".")[1];
+      for (const creator of creators) {
+        const value = creatorField === "fullName" ? this.getCreatorFullName(creator) : creator[creatorField];
+        const detail = this.getFieldMatchDetail(field, value, pattern, patternType, caseSensitive, emptyFieldPattern);
+        if (detail) {
+          return this.createFieldMatch(field, detail);
+        }
+      }
+      return { matchedFields: [], matchDetails: [] };
+    }
+    matchTagsField(item, field, pattern, patternType, caseSensitive) {
+      const tags = item.getTags();
+      for (const tag of tags) {
+        const { match } = this.testValue(tag.name, pattern, patternType, caseSensitive);
+        if (match !== null) {
+          return this.createFieldMatch(field, this.buildMatchDetail(field, tag.name, -1, -1));
+        }
+      }
+      return { matchedFields: [], matchDetails: [] };
+    }
+    getItemTypeName(item) {
+      const itemTypeID = item.itemTypeID;
+      if (typeof Zotero !== "undefined" && Zotero.ItemTypes) {
+        const itemTypeName = Zotero.ItemTypes.getName(itemTypeID);
+        if (itemTypeName) {
+          return itemTypeName;
+        }
+      }
+      return item.getField("itemType");
+    }
+    matchItemTypeField(item, field, pattern, patternType, caseSensitive) {
+      const itemTypeName = this.getItemTypeName(item);
+      const { match } = this.testValue(itemTypeName, pattern, patternType, caseSensitive);
+      if (match === null) {
+        return { matchedFields: [], matchDetails: [] };
+      }
+      return this.createFieldMatch(
+        field,
+        this.buildMatchDetail(field, itemTypeName, 0, itemTypeName.length)
+      );
+    }
+    matchCollectionField(item, field, pattern) {
+      const collectionID = Number.parseInt(pattern, 10);
+      if (isNaN(collectionID)) {
+        return { matchedFields: [], matchDetails: [] };
+      }
+      try {
+        const collections = item.getCollections();
+        if (!collections?.includes(collectionID)) {
+          return { matchedFields: [], matchDetails: [] };
+        }
+        return this.createFieldMatch(
+          field,
+          this.buildMatchDetail(field, "collection:" + collectionID, 0, String(collectionID).length)
+        );
+      } catch {
+        return { matchedFields: [], matchDetails: [] };
+      }
+    }
+    matchStandardField(item, field, pattern, patternType, caseSensitive, emptyFieldPattern) {
+      try {
+        const value = item.getField(field);
+        return this.createFieldMatch(
+          field,
+          this.getFieldMatchDetail(field, value, pattern, patternType, caseSensitive, emptyFieldPattern)
+        );
+      } catch {
+        return { matchedFields: [], matchDetails: [] };
+      }
+    }
+    testRegexValue(str, pattern, caseSensitive) {
+      try {
+        const regex = new RegExp(pattern, caseSensitive ? "" : "i");
+        return { match: regex.exec(str), regex };
+      } catch {
+        return { match: null, regex: null };
+      }
+    }
+    testLikeValue(str, pattern, caseSensitive) {
+      const likePattern = this.regexToSqlLike(pattern);
+      const regex = new RegExp(
+        likePattern.replace(/%/g, ".*").replace(/_/g, "."),
+        caseSensitive ? "" : "i"
+      );
+      return { match: regex.exec(str), regex };
+    }
+    testGlobValue(str, pattern, caseSensitive) {
+      const globPattern = this.regexToSqlGlob(pattern);
+      const regex = new RegExp(
+        "^" + globPattern.replaceAll("*", ".*").replaceAll("?", ".") + "$",
+        caseSensitive ? "" : "i"
+      );
+      return { match: regex.exec(str), regex };
+    }
+    testExactValue(str, pattern, caseSensitive) {
+      let match = null;
+      if (caseSensitive) {
+        match = str === pattern ? str : null;
+      } else if (str.toLowerCase() === pattern.toLowerCase()) {
+        match = str;
+      }
+      return { match, regex: null };
+    }
+    testContainsValue(str, pattern, caseSensitive) {
+      let match = null;
+      if (caseSensitive) {
+        match = str.includes(pattern) ? pattern : null;
+      } else if (str.toLowerCase().includes(pattern.toLowerCase())) {
+        match = pattern;
+      }
+      return { match, regex: null };
+    }
     // Test a value against pattern - returns match info for regex
     testValue(value, pattern, patternType, caseSensitive) {
-      const str = String(value);
-      switch (patternType) {
-        case PATTERN_TYPES.REGEX:
-          try {
-            const regex = new RegExp(pattern, caseSensitive ? "" : "i");
-            return { match: regex.exec(str), regex };
-          } catch (e) {
-            return { match: null, regex: null };
-          }
-        case PATTERN_TYPES.LIKE:
-        case PATTERN_TYPES.SQL_LIKE:
-          const likePattern = this.regexToSqlLike(pattern);
-          const regexFromLike = new RegExp(
-            likePattern.replace(/%/g, ".*").replace(/_/g, "."),
-            caseSensitive ? "" : "i"
-          );
-          return { match: regexFromLike.exec(str), regex: regexFromLike };
-        case PATTERN_TYPES.GLOB:
-        case PATTERN_TYPES.SQL_GLOB:
-          const globPattern = this.regexToSqlGlob(pattern);
-          const globRegex = new RegExp(
-            "^" + globPattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$",
-            caseSensitive ? "" : "i"
-          );
-          return { match: globRegex.exec(str), regex: globRegex };
-        case PATTERN_TYPES.EXACT:
-          const exactMatch = caseSensitive ? str === pattern ? str : null : str.toLowerCase() === pattern.toLowerCase() ? str : null;
-          return { match: exactMatch, regex: null };
-        case PATTERN_TYPES.CONTAINS:
-          const containsMatch = caseSensitive ? str.includes(pattern) ? pattern : null : str.toLowerCase().includes(pattern.toLowerCase()) ? pattern : null;
-          return { match: containsMatch, regex: null };
-        default:
-          return { match: null, regex: null };
+      const str = value == null ? "" : String(value);
+      if (patternType === PATTERN_TYPES.REGEX) {
+        return this.testRegexValue(str, pattern, caseSensitive);
       }
+      if (patternType === PATTERN_TYPES.LIKE || patternType === PATTERN_TYPES.SQL_LIKE) {
+        return this.testLikeValue(str, pattern, caseSensitive);
+      }
+      if (patternType === PATTERN_TYPES.GLOB || patternType === PATTERN_TYPES.SQL_GLOB) {
+        return this.testGlobValue(str, pattern, caseSensitive);
+      }
+      if (patternType === PATTERN_TYPES.EXACT) {
+        return this.testExactValue(str, pattern, caseSensitive);
+      }
+      if (patternType === PATTERN_TYPES.CONTAINS) {
+        return this.testContainsValue(str, pattern, caseSensitive);
+      }
+      return { match: null, regex: null };
     }
     // Check if value matches pattern (boolean)
     matches(value, pattern, patternType, caseSensitive) {
@@ -492,7 +671,7 @@ if (typeof console === 'undefined') {
   var search_engine_default = SearchEngine;
 
   // src/zotero/replace-engine.js
-  var PLACEHOLDER_PATTERN = /\$(\d+)|\$\{([^}]+)\}|(\$&|\$\'|\$\`|\$\+)/g;
+  var PLACEHOLDER_PATTERN = /\$(\d+)|\$\{([^}]+)\}|\$<([^>]+)>|(\$\$|\$&|\$'|\$`|\$\+)/g;
   var ReplaceEngine = class {
     constructor() {
       this.placeholderPattern = PLACEHOLDER_PATTERN;
@@ -502,97 +681,250 @@ if (typeof console === 'undefined') {
       if (typeof pattern === "function") {
         return pattern;
       }
-      const hasNumericPlaceholder = /\$(\d+)/.test(pattern);
-      const hasNamedPlaceholder = pattern.includes("${");
-      const hasSpecialPlaceholder = /\$&|\$\'|\$\+/.test(pattern);
-      if (!hasNumericPlaceholder && !hasNamedPlaceholder && !hasSpecialPlaceholder) {
+      if (typeof pattern !== "string" || !pattern.includes("$")) {
         return () => pattern;
       }
-      const hasDollarAmpersand = pattern.includes("$&");
-      const hasDollarQuote = pattern.includes("$'");
-      const hasDollarPlus = pattern.includes("$+");
-      return (match, p1, p2, p3, offset, input) => {
-        if (hasDollarAmpersand) return match;
-        if (hasDollarQuote) return input.substring(offset + match.length);
-        if (hasDollarPlus) return p1 !== void 0 ? p1 : match;
-        if (hasNumericPlaceholder) {
-          const groups = [p1, p2, p3];
-          return pattern.replace(/\$(\d+)/g, (match2, num) => {
-            const index = parseInt(num, 10);
-            return index > 0 && index <= groups.length && groups[index - 1] !== void 0 ? groups[index - 1] : match2;
-          });
+      return (match, ...args) => {
+        let groups;
+        if (args.length > 0) {
+          const maybeGroups = args.at(-1);
+          if (maybeGroups && typeof maybeGroups === "object" && !Array.isArray(maybeGroups)) {
+            groups = args.pop();
+          }
         }
-        if (hasNamedPlaceholder && p2 !== void 0) {
-          return p2;
-        }
-        return pattern;
+        const input = args.pop() || "";
+        const offset = args.pop() || 0;
+        const captures = args;
+        const lastCapture = [...captures].reverse().find((capture) => capture !== void 0) || "";
+        return pattern.replace(this.placeholderPattern, (token, numericGroup, braceName, angleName, specialToken) => {
+          if (numericGroup) {
+            return captures[Number.parseInt(numericGroup, 10) - 1] || "";
+          }
+          const groupName = braceName || angleName;
+          if (groupName) {
+            return groups && groupName in groups ? groups[groupName] || "" : "";
+          }
+          switch (specialToken) {
+            case "$$":
+              return "$";
+            case "$&":
+              return match;
+            case "$'":
+              return input.slice(offset + match.length);
+            case "$`":
+              return input.slice(0, offset);
+            case "$+":
+              return lastCapture;
+            default:
+              return token;
+          }
+        });
       };
+    }
+    escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    }
+    countMatches(regex, value) {
+      const flags = regex.flags.includes("g") ? regex.flags : `${regex.flags}g`;
+      const countingRegex = new RegExp(regex.source, flags);
+      let count = 0;
+      let match = countingRegex.exec(value);
+      while (match) {
+        count += 1;
+        if (match[0] === "") {
+          countingRegex.lastIndex += 1;
+        }
+        match = countingRegex.exec(value);
+      }
+      return count;
+    }
+    applyRegexPattern(value, regex, replacePattern) {
+      const replacements = this.countMatches(regex, value);
+      if (replacements === 0) {
+        return { result: value, replacements: 0 };
+      }
+      return {
+        result: value.replace(regex, this.compileReplacePattern(replacePattern)),
+        replacements
+      };
+    }
+    normalizeConditions(searchPatternOrConditions, options = {}) {
+      if (Array.isArray(searchPatternOrConditions)) {
+        return searchPatternOrConditions.filter((condition) => condition?.field && condition.pattern !== void 0).map((condition) => ({
+          field: condition.field,
+          pattern: condition.pattern,
+          patternType: condition.patternType || options.patternType || "regex",
+          caseSensitive: condition.caseSensitive || false
+        }));
+      }
+      const { fields = [], patternType = "regex", caseSensitive = false } = options;
+      return fields.filter(Boolean).map((field) => ({ field, pattern: searchPatternOrConditions, patternType, caseSensitive }));
+    }
+    joinCreatorNameParts(firstName, lastName) {
+      return [firstName, lastName].filter((part) => part != null && String(part).trim() !== "").map((part) => String(part).trim()).join(" ");
+    }
+    getCreatorFullName(creator) {
+      if (!creator) {
+        return "";
+      }
+      const singleFieldName = creator.name == null ? "" : String(creator.name).trim();
+      if (singleFieldName) {
+        return singleFieldName;
+      }
+      return this.joinCreatorNameParts(creator.firstName, creator.lastName);
+    }
+    splitCreatorFullName(value, creator) {
+      const trimmedValue = value == null ? "" : String(value).trim();
+      if (!trimmedValue) {
+        return { firstName: "", lastName: "" };
+      }
+      const commaIndex = trimmedValue.indexOf(",");
+      if (commaIndex !== -1) {
+        return {
+          lastName: trimmedValue.slice(0, commaIndex).trim(),
+          firstName: trimmedValue.slice(commaIndex + 1).trim()
+        };
+      }
+      const originalFirst = creator.firstName == null ? "" : String(creator.firstName).trim();
+      const originalLast = creator.lastName == null ? "" : String(creator.lastName).trim();
+      if (originalLast && trimmedValue.endsWith(originalLast)) {
+        return {
+          firstName: trimmedValue.slice(0, trimmedValue.length - originalLast.length).trim(),
+          lastName: originalLast
+        };
+      }
+      if (originalFirst && trimmedValue.startsWith(originalFirst)) {
+        return {
+          firstName: originalFirst,
+          lastName: trimmedValue.slice(originalFirst.length).trim()
+        };
+      }
+      const words = trimmedValue.split(/\s+/);
+      const lastNameWordCount = Math.max(1, originalLast ? originalLast.split(/\s+/).length : 1);
+      if (words.length > lastNameWordCount) {
+        return {
+          firstName: words.slice(0, words.length - lastNameWordCount).join(" "),
+          lastName: words.slice(words.length - lastNameWordCount).join(" ")
+        };
+      }
+      return { firstName: "", lastName: trimmedValue };
+    }
+    applyReplaceToCreatorFullName(creator, fieldConditions, replacePattern) {
+      const originalFullName = this.getCreatorFullName(creator);
+      const { result, replacements } = this.applyConditionsToValue(originalFullName, fieldConditions, replacePattern);
+      if (replacements === 0 || result === originalFullName) {
+        return false;
+      }
+      const singleFieldName = creator.name == null ? "" : String(creator.name).trim();
+      const originalFirst = creator.firstName == null ? "" : String(creator.firstName);
+      const originalLast = creator.lastName == null ? "" : String(creator.lastName);
+      if (singleFieldName && !originalFirst.trim() && !originalLast.trim()) {
+        creator.name = result;
+        return true;
+      }
+      const { result: replacedFirst } = this.applyConditionsToValue(originalFirst, fieldConditions, replacePattern);
+      const { result: replacedLast } = this.applyConditionsToValue(originalLast, fieldConditions, replacePattern);
+      if (this.joinCreatorNameParts(replacedFirst, replacedLast) === result) {
+        creator.firstName = replacedFirst;
+        creator.lastName = replacedLast;
+        return true;
+      }
+      const splitName = this.splitCreatorFullName(result, creator);
+      creator.firstName = splitName.firstName;
+      creator.lastName = splitName.lastName;
+      return true;
+    }
+    applyConditionsToValue(value, conditions, replacePattern) {
+      let result = value == null ? "" : String(value);
+      let replacements = 0;
+      for (const condition of conditions) {
+        const applyResult = this.applyReplace(result, condition.pattern, replacePattern, condition);
+        result = applyResult.result;
+        replacements += applyResult.replacements;
+      }
+      return { result, replacements };
+    }
+    previewCreatorField(item, field, fieldConditions, replacePattern) {
+      const creators = item.getCreators();
+      if (!creators) {
+        return null;
+      }
+      const modifiedCreators = creators.map((creator) => ({ ...creator }));
+      let changed = false;
+      const creatorField = field.split(".")[1];
+      for (const creator of modifiedCreators) {
+        if (creatorField === "fullName") {
+          if (this.applyReplaceToCreatorFullName(creator, fieldConditions, replacePattern)) {
+            changed = true;
+          }
+          continue;
+        }
+        const value = creator[creatorField];
+        const originalValue = value == null ? "" : String(value);
+        const { result, replacements } = this.applyConditionsToValue(originalValue, fieldConditions, replacePattern);
+        if (replacements > 0 && result !== originalValue) {
+          creator[creatorField] = result;
+          changed = true;
+        }
+      }
+      if (!changed) {
+        return null;
+      }
+      return {
+        field,
+        original: JSON.stringify(creators),
+        replaced: JSON.stringify(modifiedCreators)
+      };
+    }
+    previewStandardField(item, field, fieldConditions, replacePattern) {
+      const original = item.getField(field);
+      const originalValue = original == null ? "" : String(original);
+      const { result, replacements } = this.applyConditionsToValue(originalValue, fieldConditions, replacePattern);
+      if (replacements === 0 || result === originalValue) {
+        return null;
+      }
+      return { field, original: originalValue, replaced: result };
     }
     // Apply replace to a single value
     applyReplace(value, searchPattern, replacePattern, options = {}) {
       const { patternType = "regex", caseSensitive = false } = options;
-      const str = String(value);
+      const str = value == null ? "" : String(value);
       if (patternType === "regex") {
-        const regex = new RegExp(searchPattern, caseSensitive ? "g" : "gi");
-        const matches = str.match(regex) || [];
-        const replacements2 = matches.length;
-        const result2 = str.replace(regex, this.compileReplacePattern(replacePattern));
-        return { result: result2, replacements: replacements2 };
+        return this.applyRegexPattern(str, new RegExp(searchPattern, caseSensitive ? "g" : "gi"), replacePattern);
       }
-      const result = str.split(searchPattern).join(replacePattern);
-      const replacements = str.split(searchPattern).length - 1;
-      return { result, replacements };
+      if (patternType === "exact") {
+        const exactRegex = new RegExp(`^${this.escapeRegExp(searchPattern)}$`, caseSensitive ? "" : "i");
+        return this.applyRegexPattern(str, exactRegex, replacePattern);
+      }
+      const literalRegex = new RegExp(this.escapeRegExp(searchPattern), caseSensitive ? "g" : "gi");
+      return this.applyRegexPattern(str, literalRegex, replacePattern);
     }
     // Preview replace on an item (no save)
-    previewReplace(item, searchPattern, replacePattern, options = {}) {
-      const { fields = [] } = options;
+    previewReplace(item, searchPatternOrConditions, replacePattern, options = {}) {
+      const conditions = this.normalizeConditions(searchPatternOrConditions, options);
       const changes = [];
-      for (const field of fields) {
-        if (field.startsWith("creator.")) {
-          const creators = item.getCreators();
-          if (!creators) continue;
-          const modifiedCreators = [...creators];
-          let changed = false;
-          const creatorField = field.split(".")[1];
-          for (let i = 0; i < modifiedCreators.length; i++) {
-            const creator = modifiedCreators[i];
-            const value = creatorField === "fullName" ? creator.name : creator[creatorField];
-            if (value) {
-              const { result } = this.applyReplace(value, searchPattern, replacePattern, options);
-              if (result !== value) {
-                if (creatorField === "fullName") {
-                  modifiedCreators[i] = { ...creator, name: result };
-                } else {
-                  modifiedCreators[i] = { ...creator, [creatorField]: result };
-                }
-                changed = true;
-              }
-            }
-          }
-          if (changed) {
-            changes.push({
-              field,
-              original: JSON.stringify(creators),
-              replaced: JSON.stringify(modifiedCreators)
-            });
-          }
-        } else {
-          const original = item.getField(field);
-          const { result } = this.applyReplace(original, searchPattern, replacePattern, options);
-          if (result !== original) {
-            changes.push({ field, original, replaced: result });
-          }
+      const conditionsByField = /* @__PURE__ */ new Map();
+      for (const condition of conditions) {
+        if (!conditionsByField.has(condition.field)) {
+          conditionsByField.set(condition.field, []);
+        }
+        conditionsByField.get(condition.field).push(condition);
+      }
+      for (const [field, fieldConditions] of conditionsByField.entries()) {
+        const change = field.startsWith("creator.") ? this.previewCreatorField(item, field, fieldConditions, replacePattern) : this.previewStandardField(item, field, fieldConditions, replacePattern);
+        if (change) {
+          changes.push(change);
         }
       }
       return changes;
     }
     // Apply replace to item (with save)
-    async applyReplaceToItem(item, searchPattern, replacePattern, options = {}) {
-      const { fields = [], progressCallback = () => {
+    async applyReplaceToItem(item, searchPatternOrConditions, replacePattern, options = {}) {
+      const { progressCallback = () => {
       } } = options;
-      const changes = this.previewReplace(item, searchPattern, replacePattern, options);
+      const changes = this.previewReplace(item, searchPatternOrConditions, replacePattern, options);
       if (changes.length === 0) {
-        return { success: false, changes: [], message: "No changes needed" };
+        return { success: true, changes: [], message: "No changes needed" };
       }
       for (const change of changes) {
         progressCallback({ itemID: item.id, field: change.field });
@@ -612,8 +944,8 @@ if (typeof console === 'undefined') {
       }
     }
     // Batch process items
-    async processItems(items, searchPattern, replacePattern, options = {}) {
-      const { fields = [], progressCallback = () => {
+    async processItems(items, searchPatternOrConditions, replacePattern, options = {}) {
+      const { progressCallback = () => {
       } } = options;
       const results = {
         modified: 0,
@@ -624,7 +956,7 @@ if (typeof console === 'undefined') {
         const item = items[i];
         progressCallback({ current: i + 1, total: items.length, itemID: item.id });
         try {
-          const result = await this.applyReplaceToItem(item, searchPattern, replacePattern, options);
+          const result = await this.applyReplaceToItem(item, searchPatternOrConditions, replacePattern, options);
           if (result.success) {
             if (result.changes.length > 0) {
               results.modified++;
@@ -860,7 +1192,7 @@ if (typeof console === 'undefined') {
       conditions: [
         { field: "creator.lastName", pattern: "\\b[Mm][Aa][Cc][A-Za-z]*", patternType: "regex" }
       ],
-      replace: (m) => m.charAt(0).toUpperCase() + m.charAt(1).toLowerCase() + m.charAt(2).toUpperCase() + m.slice(3).toLowerCase(),
+      replace: (m) => m.charAt(0).toUpperCase() + m.slice(1, 3).toLowerCase() + m.slice(3, 4).toUpperCase() + m.slice(4).toLowerCase(),
       category: "Capitalization"
     },
     // === Diacritics ===
@@ -985,488 +1317,17 @@ if (typeof console === 'undefined') {
 
   // src/ui/search-dialog.js
   var SearchDialog = class {
-    constructor(window2) {
-      this.window = window2;
-      this.state = {
-        searchPattern: "",
-        replacePattern: "",
-        patternType: "regex",
-        caseSensitive: false,
-        fields: [],
-        results: [],
-        selectedItemIDs: /* @__PURE__ */ new Set(),
-        replacedCount: 0
-      };
-      this.elements = {};
-    }
-    // Open the dialog
     static open() {
       const mainWindow = Services.wm.getMostRecentWindow("navigator:browser");
-      const patterns = mainWindow.ZoteroSearchReplace?.DATA_QUALITY_PATTERNS || [];
-      const categories = mainWindow.ZoteroSearchReplace?.PATTERN_CATEGORIES || [];
       const dialogArgs = {
-        patterns,
-        categories,
-        ZoteroSearchReplace: mainWindow.ZoteroSearchReplace,
-        Zotero: mainWindow.Zotero
+        patterns: mainWindow.ZoteroSearchReplace?.DATA_QUALITY_PATTERNS || []
       };
-      const dialogWindow = mainWindow.openDialog(
+      return mainWindow.openDialog(
         "chrome://zotero-search-replace/content/dialog.html",
         "zotero-search-replace-dialog",
         "chrome,centerscreen,resizable=yes,width=800,height=600",
         dialogArgs
       );
-      return dialogWindow;
-    }
-    // Initialize the dialog
-    init() {
-      this.cacheElements();
-      this.setupScope();
-      this.setupEventListeners();
-      this.loadPreloadedPatterns();
-      this.updateUIState();
-    }
-    setupScope() {
-      try {
-        if (this.window.opener && this.window.opener.ZoteroSearchReplace) {
-          this.window.__zotero_scope__ = this.window.opener;
-          console.log("SearchReplace: Using scope from window.opener");
-          return;
-        }
-      } catch (e) {
-        console.log("SearchReplace: Could not access window.opener:", e.message);
-      }
-      try {
-        if (this.window.arguments && this.window.arguments[0]) {
-          const args = this.window.arguments[0];
-          if (args.ZoteroSearchReplace) {
-            this.window.__zotero_scope__ = { ZoteroSearchReplace: args.ZoteroSearchReplace };
-            console.log("SearchReplace: Using scope from window.arguments");
-            return;
-          }
-        }
-      } catch (e) {
-        console.log("SearchReplace: Could not access window.arguments:", e.message);
-      }
-      if (this.window.ZoteroSearchReplace) {
-        this.window.__zotero_scope__ = this.window;
-        console.log("SearchReplace: Using scope from window");
-        return;
-      }
-      console.log("SearchReplace: No scope available, using fallback");
-    }
-    cacheElements() {
-      this.elements = {
-        searchInput: this.window.document.getElementById("search-input"),
-        searchField: this.window.document.getElementById("search-field"),
-        patternType: this.window.document.getElementById("pattern-type"),
-        caseSensitive: this.window.document.getElementById("case-sensitive"),
-        searchButton: this.window.document.getElementById("search-button"),
-        resultsCount: this.window.document.getElementById("results-count"),
-        resultsList: this.window.document.getElementById("results-list"),
-        replaceInput: this.window.document.getElementById("replace-input"),
-        previewOutput: this.window.document.getElementById("preview-output"),
-        applyReplaceButton: this.window.document.getElementById("apply-replace"),
-        createCollection: this.window.document.getElementById("create-collection"),
-        patternsList: this.window.document.getElementById("patterns-list"),
-        searchError: this.window.document.getElementById("search-error"),
-        selectAll: this.window.document.getElementById("select-all"),
-        deselectAll: this.window.document.getElementById("deselect-all"),
-        previewReplaceButton: this.window.document.getElementById("preview-replace")
-      };
-    }
-    setupEventListeners() {
-      if (this.elements.searchButton) {
-        this.elements.searchButton.addEventListener("click", () => this.performSearch());
-      }
-      if (this.elements.previewReplaceButton) {
-        this.elements.previewReplaceButton.addEventListener("click", () => this.previewReplace());
-      }
-      if (this.elements.applyReplaceButton) {
-        this.elements.applyReplaceButton.addEventListener("click", () => this.applyReplace());
-      }
-      if (this.elements.createCollection) {
-        this.elements.createCollection.addEventListener("click", () => this.createCollection());
-      }
-      if (this.elements.selectAll) {
-        this.elements.selectAll.addEventListener("click", () => this.selectAll());
-      }
-      if (this.elements.deselectAll) {
-        this.elements.deselectAll.addEventListener("click", () => this.deselectAll());
-      }
-      this.window.document.addEventListener("keydown", (event) => {
-        const target = event.target.tagName;
-        if (target === "INPUT" || target === "TEXTAREA" || target === "SELECT") {
-          return;
-        }
-        if (event.ctrlKey || event.metaKey) {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            this.performSearch();
-          } else if (event.key === "r") {
-            event.preventDefault();
-            if (this.elements.replaceInput) {
-              this.elements.replaceInput.focus();
-            }
-          }
-        } else if (event.key === "Escape") {
-          this.window.close();
-        }
-      });
-    }
-    async performSearch() {
-      const pattern = this.elements.searchInput.value;
-      if (!pattern) {
-        this.showError("Please enter a search pattern");
-        return;
-      }
-      const field = this.elements.searchField.value;
-      const fields = field === "all" ? [
-        "title",
-        "abstractNote",
-        "tags",
-        "date",
-        "publicationTitle",
-        "DOI",
-        "extra",
-        "creator.lastName",
-        "creator.firstName"
-      ] : [field];
-      const patternType = this.elements.patternType.value;
-      const caseSensitive = this.elements.caseSensitive.checked;
-      this.showProgress("Searching...");
-      try {
-        const scope = this.window.__zotero_scope__ || this.window;
-        const SearchEngine2 = scope.ZoteroSearchReplace?.SearchEngine || scope.SearchEngine;
-        if (!SearchEngine2) {
-          throw new Error("SearchEngine not loaded");
-        }
-        const engine = new SearchEngine2();
-        const results = await engine.search(pattern, {
-          fields,
-          patternType,
-          caseSensitive,
-          progressCallback: (progress) => {
-            if (progress.phase === "filter") {
-              this.showProgress(`Found ${progress.count} potential matches...`);
-            } else if (progress.phase === "refine") {
-              this.showProgress(`Refining ${progress.current}/${progress.total}...`);
-            }
-          }
-        });
-        this.state.results = results;
-        this.state.fields = fields;
-        this.renderResults();
-      } catch (e) {
-        if (e.name === "SearchError") {
-          this.showError(`Search error: ${e.message}`);
-        } else {
-          this.showError(`Unexpected error: ${e.message}`);
-        }
-      }
-    }
-    renderResults() {
-      const list = this.elements.resultsList;
-      while (list.firstChild) {
-        list.removeChild(list.firstChild);
-      }
-      for (const result of this.state.results) {
-        for (const detail of result.matchDetails) {
-          const item = this.window.document.createElement("div");
-          item.className = "result-item";
-          item.dataset.itemID = result.itemID;
-          const title = this.window.document.createElement("span");
-          title.textContent = result.item.getField("title");
-          title.style.flex = "1";
-          const field = this.window.document.createElement("span");
-          field.textContent = detail.field;
-          field.style.width = "120px";
-          const match = this.window.document.createElement("span");
-          const preview = this.getMatchPreview(detail.value, detail.matchIndex, detail.matchLength);
-          match.textContent = preview;
-          item.appendChild(title);
-          item.appendChild(field);
-          item.appendChild(match);
-          item.addEventListener("click", () => {
-            item.classList.toggle("selected");
-            const id = parseInt(item.dataset.itemID);
-            if (this.state.selectedItemIDs.has(id)) {
-              this.state.selectedItemIDs.delete(id);
-            } else {
-              this.state.selectedItemIDs.add(id);
-            }
-            this.updateUIState();
-          });
-          list.appendChild(item);
-        }
-      }
-      this.elements.resultsCount.textContent = `${this.state.results.length} items found`;
-      this.updateUIState();
-    }
-    getMatchPreview(value, matchIndex, matchLength) {
-      if (matchIndex < 0) return value;
-      const start = Math.max(0, matchIndex - 20);
-      const end = Math.min(value.length, matchIndex + matchLength + 20);
-      let preview = value.substring(start, end);
-      if (start > 0) preview = "..." + preview;
-      if (end < value.length) preview = preview + "...";
-      return preview;
-    }
-    selectAll() {
-      const items = this.elements.resultsList.querySelectorAll(".result-item");
-      items.forEach((item) => {
-        item.classList.add("selected");
-        this.state.selectedItemIDs.add(parseInt(item.dataset.itemID));
-      });
-      this.updateUIState();
-    }
-    deselectAll() {
-      const items = this.elements.resultsList.querySelectorAll(".result-item");
-      items.forEach((item) => {
-        item.classList.remove("selected");
-      });
-      this.state.selectedItemIDs.clear();
-      this.updateUIState();
-    }
-    async previewReplace() {
-      if (this.state.results.length === 0) {
-        this.showError("No results to preview");
-        return;
-      }
-      const firstResult = this.state.results[0];
-      const searchPattern = this.elements.searchInput.value;
-      const replacePattern = this.elements.replaceInput.value;
-      const patternType = this.elements.patternType.value;
-      const caseSensitive = this.elements.caseSensitive.checked;
-      try {
-        const scope = this.window.__zotero_scope__ || this.window;
-        const ReplaceEngine2 = scope.ZoteroSearchReplace?.ReplaceEngine || scope.ReplaceEngine;
-        if (!ReplaceEngine2) {
-          throw new Error("ReplaceEngine not loaded");
-        }
-        const engine = new ReplaceEngine2();
-        const changes = engine.previewReplace(firstResult.item, searchPattern, replacePattern, {
-          fields: this.state.fields,
-          patternType,
-          caseSensitive
-        });
-        if (changes.length === 0) {
-          this.elements.previewOutput.value = "No changes would be made";
-        } else {
-          let preview = "Preview for first item:\n\n";
-          for (const change of changes) {
-            preview += `${change.field}:
-`;
-            preview += `  Original: "${change.original}"
-`;
-            preview += `  Replaced: "${change.replaced}"
-
-`;
-          }
-          this.elements.previewOutput.value = preview;
-        }
-      } catch (e) {
-        this.showError(`Preview error: ${e.message}`);
-      }
-    }
-    async applyReplace() {
-      const selectedIDs = Array.from(this.state.selectedItemIDs);
-      if (selectedIDs.length === 0) {
-        this.showError("No items selected");
-        return;
-      }
-      const selectedItems = this.state.results.filter((r) => this.state.selectedItemIDs.has(r.itemID)).map((r) => r.item);
-      const searchPattern = this.elements.searchInput.value;
-      const replacePattern = this.elements.replaceInput.value;
-      const patternType = this.elements.patternType.value;
-      const caseSensitive = this.elements.caseSensitive.checked;
-      if (!Services.prompt.confirmCount(
-        null,
-        "Search & Replace",
-        `Replace in ${selectedItems.length} items?`
-      )) {
-        return;
-      }
-      const progressWindow = this.window.open(
-        "progress.html",
-        "progress",
-        "width=400,height=200,modal=yes,centerscreen"
-      );
-      try {
-        const scope = this.window.__zotero_scope__ || this.window;
-        const ReplaceEngine2 = scope.ZoteroSearchReplace?.ReplaceEngine || scope.ReplaceEngine;
-        if (!ReplaceEngine2) {
-          throw new Error("ReplaceEngine not loaded");
-        }
-        const engine = new ReplaceEngine2();
-        const result = await engine.processItems(selectedItems, searchPattern, replacePattern, {
-          fields: this.state.fields,
-          patternType,
-          caseSensitive,
-          progressCallback: (progress) => {
-            this.updateProgress(progressWindow, progress);
-          }
-        });
-        progressWindow.close();
-        let message = `Modified: ${result.modified}
-`;
-        message += `Skipped: ${result.skipped}
-`;
-        if (result.errors.length > 0) {
-          message += `Errors: ${result.errors.length}`;
-        }
-        Services.prompt.alert(null, "Search & Replace", message);
-        this.performSearch();
-      } catch (e) {
-        if (progressWindow && !progressWindow.closed) {
-          progressWindow.close();
-        }
-        this.showError(`Replace failed: ${e.message}`);
-      }
-    }
-    async createCollection() {
-      const selectedIDs = Array.from(this.state.selectedItemIDs);
-      if (selectedIDs.length === 0) {
-        this.showError("No items selected");
-        return;
-      }
-      const name = Services.prompt.prompt(null, "Search & Replace", "Enter collection name:");
-      if (!name) return;
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        this.showError("Collection name cannot be empty");
-        return;
-      }
-      try {
-        const collection = new Zotero.Collection();
-        collection.name = trimmedName;
-        await collection.saveTx();
-        const items = await Zotero.Items.getAsync(selectedIDs);
-        for (const item of items) {
-          item.addToCollection(collection.id);
-          await item.saveTx();
-        }
-        Services.prompt.alert(
-          null,
-          "Search & Replace",
-          `Created collection "${trimmedName}" with ${selectedIDs.length} items`
-        );
-      } catch (e) {
-        this.showError(`Failed to create collection: ${e.message}`);
-      }
-    }
-    loadPreloadedPatterns() {
-      let patterns = null;
-      try {
-        if (this.window.arguments && this.window.arguments[0]) {
-          const args = this.window.arguments[0];
-          patterns = args.patterns;
-          if (patterns && patterns.length > 0) {
-            console.log("Found patterns from window.arguments");
-          }
-        }
-      } catch (e) {
-        console.log("window.arguments access error:", e.message);
-      }
-      if (!patterns || patterns.length === 0) {
-        try {
-          if (this.window.opener && this.window.opener.ZoteroSearchReplace) {
-            patterns = this.window.opener.ZoteroSearchReplace.DATA_QUALITY_PATTERNS;
-            if (patterns) {
-              console.log("Found patterns from opener");
-            }
-          }
-        } catch (e) {
-          console.log("opener access error:", e.message);
-        }
-      }
-      if (!patterns || patterns.length === 0) {
-        const scope = this.window.__zotero_scope__ || this.window;
-        patterns = scope.ZoteroSearchReplace?.DATA_QUALITY_PATTERNS;
-        if (patterns) {
-          console.log("Found patterns from __zotero_scope__");
-        }
-      }
-      if (patterns && patterns.length > 0) {
-        this.window.DATA_QUALITY_PATTERNS = patterns;
-        console.log("Injected patterns into window.DATA_QUALITY_PATTERNS");
-      }
-      if (!patterns || patterns.length === 0) {
-        console.log("No patterns found");
-        return;
-      }
-      console.log("Loading", patterns.length, "patterns");
-      const container = this.elements.patternsList;
-      if (!container) return;
-      const categories = {};
-      for (const pattern of patterns) {
-        if (!categories[pattern.category]) {
-          const catDiv = this.window.document.createElement("div");
-          catDiv.className = "pattern-category";
-          const catTitle = this.window.document.createElement("strong");
-          catTitle.textContent = pattern.category;
-          catDiv.appendChild(catTitle);
-          container.appendChild(catDiv);
-          categories[pattern.category] = [];
-        }
-        categories[pattern.category].push(pattern);
-      }
-      for (const catName in categories) {
-        const catDiv = container.lastChild;
-        for (const pattern of categories[catName]) {
-          const item = this.window.document.createElement("div");
-          item.className = "pattern-item";
-          const name = this.window.document.createElement("span");
-          name.textContent = pattern.name;
-          const desc = this.window.document.createElement("span");
-          desc.style.color = "#666";
-          desc.style.fontSize = "12px";
-          desc.textContent = pattern.description;
-          item.appendChild(name);
-          item.appendChild(desc);
-          item.addEventListener("click", () => {
-            this.elements.searchInput.value = pattern.search || "";
-            this.elements.replaceInput.value = pattern.replace || "";
-            if (pattern.fields && pattern.fields.length > 0) {
-              this.elements.searchField.value = pattern.fields[0];
-            }
-            if (pattern.patternType) {
-              this.elements.patternType.value = pattern.patternType;
-            }
-          });
-          catDiv.appendChild(item);
-        }
-      }
-    }
-    updateUIState() {
-      const hasResults = this.state.results.length > 0;
-      const hasSelection = this.state.selectedItemIDs.size > 0;
-      const hasReplace = this.elements.replaceInput && this.elements.replaceInput.value.length > 0;
-      if (this.elements.applyReplaceButton) {
-        this.elements.applyReplaceButton.disabled = !hasSelection || !hasReplace;
-      }
-    }
-    showError(message) {
-      if (this.elements.searchError) {
-        this.elements.searchError.textContent = message;
-        this.window.setTimeout(() => {
-          this.elements.searchError.textContent = "";
-        }, 5e3);
-      }
-    }
-    showProgress(message) {
-      if (this.elements.resultsCount) {
-        this.elements.resultsCount.textContent = message;
-      }
-    }
-    updateProgress(progressWindow, progress) {
-      if (progressWindow && !progressWindow.closed) {
-        const percent = Math.round(progress.current / progress.total * 100);
-        try {
-          progressWindow.postMessage({ type: "progress", percent, status: progress.status }, "*");
-        } catch (e) {
-        }
-      }
     }
   };
   var search_dialog_default = SearchDialog;
