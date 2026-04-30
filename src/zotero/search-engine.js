@@ -141,11 +141,14 @@ const FIELDS_WITH_CONTAINS = [
   'attachmentContent', 'annotationText', 'annotationComment'
 ];
 
-const ALL_TEXT_FIELDS = [
-  'title', 'abstractNote', 'publicationTitle', 'publisher',
-  'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog',
-  'url', 'DOI', 'ISBN', 'ISSN', 'callNumber',
-  'creator.lastName', 'creator.firstName'
+// Keep this aligned with the dialog field picker so "All Fields" searches every field
+// the user can target from the dialog, not just a text-only subset.
+const ALL_DIALOG_FIELDS = [
+  'title', 'abstractNote', 'date', 'dateModified',
+  'creator.lastName', 'creator.firstName', 'creator.fullName',
+  'publicationTitle', 'publisher', 'volume', 'issue', 'pages',
+  'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra',
+  'itemType', 'tags', 'note', 'place', 'archiveLocation', 'libraryCatalog'
 ];
 
 const ANY_FIELD_ALIASES = new Set(['all', SEARCH_FIELDS.ANY_FIELD]);
@@ -623,7 +626,7 @@ class SearchEngine {
     if (ANY_FIELD_ALIASES.has(field)) {
       return this.matchItem(item, pattern, {
         ...options,
-        fields: ALL_TEXT_FIELDS
+        fields: ALL_DIALOG_FIELDS
       });
     }
 

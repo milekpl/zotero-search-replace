@@ -100,23 +100,31 @@ if (typeof console === 'undefined') {
     "annotationText",
     "annotationComment"
   ];
-  var ALL_TEXT_FIELDS = [
+  var ALL_DIALOG_FIELDS = [
     "title",
     "abstractNote",
+    "date",
+    "dateModified",
+    "creator.lastName",
+    "creator.firstName",
+    "creator.fullName",
     "publicationTitle",
     "publisher",
-    "note",
-    "extra",
-    "place",
-    "archiveLocation",
-    "libraryCatalog",
-    "url",
+    "volume",
+    "issue",
+    "pages",
     "DOI",
     "ISBN",
     "ISSN",
+    "url",
     "callNumber",
-    "creator.lastName",
-    "creator.firstName"
+    "extra",
+    "itemType",
+    "tags",
+    "note",
+    "place",
+    "archiveLocation",
+    "libraryCatalog"
   ];
   var ANY_FIELD_ALIASES = /* @__PURE__ */ new Set(["all", SEARCH_FIELDS.ANY_FIELD]);
   var DATE_FIELDS = /* @__PURE__ */ new Set(["date", "dateAdded", "dateModified"]);
@@ -477,7 +485,7 @@ if (typeof console === 'undefined') {
       if (ANY_FIELD_ALIASES.has(field)) {
         return this.matchItem(item, pattern, {
           ...options,
-          fields: ALL_TEXT_FIELDS
+          fields: ALL_DIALOG_FIELDS
         });
       }
       if (field.startsWith("creator.")) {

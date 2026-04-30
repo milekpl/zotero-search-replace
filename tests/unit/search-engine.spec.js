@@ -330,6 +330,69 @@ describe('SearchEngine', () => {
       expect(result.matchedFields).toContain('publisher');
     });
 
+    it('should match all-field conditions against tags', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn().mockReturnValue(''),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([{ name: 'Needle tag' }])
+      };
+
+      const conditions = [
+        { pattern: 'needle', field: 'all', patternType: 'contains', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('tags');
+    });
+
+    it('should match all-field conditions against creator full names', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn().mockReturnValue(''),
+        getCreators: jest.fn().mockReturnValue([
+          { firstName: 'Ada', lastName: 'Lovelace', creatorType: 1 }
+        ]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const conditions = [
+        { pattern: 'Ada Lovelace', field: 'all', patternType: 'contains', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('creator.fullName');
+    });
+
+    it('should match all-field conditions against item type names', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        itemTypeID: null,
+        getField: jest.fn((field) => {
+          if (field === 'itemType') return 'book';
+          return '';
+        }),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const conditions = [
+        { pattern: 'book', field: 'all', patternType: 'contains', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('itemType');
+    });
+
     it('should match truly empty titles with the whitespace-empty regex preset', () => {
       const item = createMockItem('', 'https://example.com');
       const conditions = [
