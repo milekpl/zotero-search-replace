@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.5 - 2026-06-15
+
+### Fixed
+- Fixed Phase 2 candidate collection for searches that skip Phase 1 by fetching library item IDs via `Zotero.Items.getAll(...)`, preventing false-empty results in Zotero 8 for `All Fields` and regex-heavy queries.
+- Fixed one-character `contains`/`exact` searches (for example `Place = B`) by bypassing Phase 1 prefiltering for single-character terms and matching in Phase 2.
+- Fixed `All Fields` coverage to include the `language` field, so searches such as `de`, `nl|de`, and language negation workflows can match language metadata correctly.
+
+### Added
+- Added `Language` to the field dropdown in the search dialog.
+- Added unit coverage for language matching in `All Fields` and single-character prefilter fallback behavior.
+
 ## 0.2.3 - 2026-04-24
 
 ### Added
