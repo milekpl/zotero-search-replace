@@ -38,6 +38,7 @@ export const SEARCH_FIELDS = {
   ISBN: 'ISBN',
   ISSN: 'ISSN',
   URL: 'url',
+  LANGUAGE: 'language',
 
   // Other fields
   TAGS: 'tags',
@@ -103,6 +104,7 @@ export const SEARCH_FIELD_NAMES = {
   'ISBN': 'ISBN',
   'ISSN': 'ISSN',
   'url': 'URL',
+  'language': 'Language',
   'tags': 'Tags',
   'callNumber': 'Call Number',
   'extra': 'Extra',
@@ -136,7 +138,7 @@ export const SEARCH_FIELD_NAMES = {
 // Fields that support 'contains' operator in Zotero.Search
 const FIELDS_WITH_CONTAINS = [
   'title', 'abstractNote', 'publicationTitle', 'publisher',
-  'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra',
+  'DOI', 'ISBN', 'ISSN', 'url', 'language', 'callNumber', 'extra',
   'place', 'archiveLocation', 'libraryCatalog',
   'attachmentContent', 'annotationText', 'annotationComment'
 ];
@@ -147,7 +149,7 @@ const ALL_DIALOG_FIELDS = [
   'title', 'abstractNote', 'date', 'dateModified',
   'creator.lastName', 'creator.firstName', 'creator.fullName',
   'publicationTitle', 'publisher', 'volume', 'issue', 'pages',
-  'DOI', 'ISBN', 'ISSN', 'url', 'callNumber', 'extra',
+  'DOI', 'ISBN', 'ISSN', 'url', 'language', 'callNumber', 'extra',
   'itemType', 'tags', 'note', 'place', 'archiveLocation', 'libraryCatalog'
 ];
 
@@ -224,6 +226,10 @@ class SearchEngine {
     }
 
     if (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS) {
+      // Zotero's prefilter can miss one-character terms; refine those in Phase 2 only.
+      if (pattern.length < 2) {
+        return null;
+      }
       return pattern;
     }
 
@@ -488,9 +494,18 @@ class SearchEngine {
   async fetchAllItemIDs(libraryID, progressCallback) {
     progressCallback({ phase: 'filter', count: 'fetching all items...' });
 
-    const search = new Zotero.Search();
-    search.libraryID = libraryID;
-    const itemIDs = await search.search();
+    let itemIDs = [];
+    if (Zotero.Items && typeof Zotero.Items.getAll === 'function') {
+      const items = await Zotero.Items.getAll(libraryID);
+      itemIDs = [...new Set(items
+        .map((item) => (typeof item === 'number' ? item : item?.id))
+        .filter((id) => typeof id === 'number'))];
+    } else {
+      const search = new Zotero.Search();
+      search.libraryID = libraryID;
+      itemIDs = await search.search();
+    }
+
     progressCallback({ phase: 'filter', count: itemIDs.length });
     return itemIDs;
   }

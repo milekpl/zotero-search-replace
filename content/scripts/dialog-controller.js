@@ -6,7 +6,7 @@
 // Text fields for "All Fields" search - all searchable text fields except dates and itemType
 const TEXT_FIELDS = [
   'title', 'abstractNote', 'publicationTitle', 'publisher',
-  'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog',
+  'language', 'note', 'extra', 'place', 'archiveLocation', 'libraryCatalog',
   'url', 'DOI', 'ISBN', 'ISSN', 'callNumber',
   'creator.lastName', 'creator.firstName'
 ];
@@ -621,6 +621,7 @@ var ZoteroSearchDialog = {
       // Publication
       { value: 'publicationTitle', label: 'Publication', fieldType: 'text' },
       { value: 'publisher', label: 'Publisher', fieldType: 'text' },
+      { value: 'language', label: 'Language', fieldType: 'text' },
       { value: 'volume', label: 'Volume', fieldType: 'text' },
       { value: 'issue', label: 'Issue', fieldType: 'text' },
       { value: 'pages', label: 'Pages', fieldType: 'text' },

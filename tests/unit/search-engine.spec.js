@@ -10,7 +10,8 @@ const mockZotero = {
     search: jest.fn().mockResolvedValue([1, 2, 3])
   })),
   Items: {
-    getAsync: jest.fn().mockResolvedValue([])
+    getAsync: jest.fn().mockResolvedValue([]),
+    getAll: jest.fn().mockResolvedValue([])
   },
   Libraries: {
     userLibraryID: 1
@@ -106,6 +107,11 @@ describe('SearchEngine', () => {
       // https?://books.google.*$ should extract "google" (longest literal)
       const result = engine.buildSearchTerm('https?://books.google.*$');
       expect(result).toBe('google');
+    });
+
+    it('should skip Phase 1 for one-character exact/contains terms', () => {
+      expect(engine.buildSearchTerm('B', PATTERN_TYPES.EXACT)).toBeNull();
+      expect(engine.buildSearchTerm('B', PATTERN_TYPES.CONTAINS)).toBeNull();
     });
   });
 
@@ -393,6 +399,28 @@ describe('SearchEngine', () => {
       expect(result.matchedFields).toContain('itemType');
     });
 
+    it('should match all-field conditions against language', () => {
+      const item = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn((field) => {
+          if (field === 'language') return 'de';
+          return '';
+        }),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      const conditions = [
+        { pattern: 'de', field: 'all', patternType: 'contains', caseSensitive: false, operator: 'AND' }
+      ];
+
+      const result = engine.evaluateConditions(item, conditions);
+      expect(result.matched).toBe(true);
+      expect(result.matchedFields).toContain('language');
+    });
+
     it('should match truly empty titles with the whitespace-empty regex preset', () => {
       const item = createMockItem('', 'https://example.com');
       const conditions = [
@@ -575,6 +603,7 @@ describe('SearchEngine', () => {
       };
 
       const searches = [];
+      mockZotero.Items.getAll = jest.fn().mockResolvedValue([mockItem]);
       mockZotero.Items.getAsync = jest.fn().mockResolvedValue([mockItem]);
       mockZotero.Search = jest.fn().mockImplementation(() => {
         const search = {
@@ -593,8 +622,36 @@ describe('SearchEngine', () => {
       });
 
       expect(results).toHaveLength(1);
-      expect(searches).toHaveLength(1);
-      expect(searches[0].addCondition).not.toHaveBeenCalled();
+      expect(mockZotero.Items.getAll).toHaveBeenCalledWith(1);
+      expect(searches).toHaveLength(0);
+    });
+
+    it('should skip Phase 1 for one-character contains patterns and still match', async () => {
+      const mockItem = {
+        id: 1,
+        key: 'ABC123',
+        libraryID: 1,
+        getField: jest.fn((field) => {
+          if (field === 'place') return 'Berlin';
+          return '';
+        }),
+        getCreators: jest.fn().mockReturnValue([]),
+        getTags: jest.fn().mockReturnValue([])
+      };
+
+      mockZotero.Items.getAll = jest.fn().mockResolvedValue([mockItem]);
+      mockZotero.Items.getAsync = jest.fn().mockResolvedValue([mockItem]);
+      mockZotero.Search = jest.fn();
+
+      const results = await engine.search('B', {
+        fields: ['place'],
+        patternType: 'contains',
+        caseSensitive: false
+      });
+
+      expect(results).toHaveLength(1);
+      expect(results[0].matchedFields).toContain('place');
+      expect(mockZotero.Search).not.toHaveBeenCalled();
     });
 
     it('should NOT match regex metacharacters in exact match mode', async () => {
@@ -721,7 +778,8 @@ describe('SearchEngine field matching', () => {
         search: jest.fn().mockResolvedValue([1, 2, 3])
       })),
       Items: {
-        getAsync: jest.fn().mockResolvedValue([])
+        getAsync: jest.fn().mockResolvedValue([]),
+        getAll: jest.fn().mockResolvedValue([])
       },
       Libraries: {
         userLibraryID: 1

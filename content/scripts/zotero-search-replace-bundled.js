@@ -45,6 +45,7 @@ if (typeof console === 'undefined') {
     ISBN: "ISBN",
     ISSN: "ISSN",
     URL: "url",
+    LANGUAGE: "language",
     // Other fields
     TAGS: "tags",
     CALL_NUMBER: "callNumber",
@@ -91,6 +92,7 @@ if (typeof console === 'undefined') {
     "ISBN",
     "ISSN",
     "url",
+    "language",
     "callNumber",
     "extra",
     "place",
@@ -117,6 +119,7 @@ if (typeof console === 'undefined') {
     "ISBN",
     "ISSN",
     "url",
+    "language",
     "callNumber",
     "extra",
     "itemType",
@@ -192,6 +195,9 @@ if (typeof console === 'undefined') {
         return pattern;
       }
       if (patternType === PATTERN_TYPES.EXACT || patternType === PATTERN_TYPES.CONTAINS) {
+        if (pattern.length < 2) {
+          return null;
+        }
         return pattern;
       }
       let searchTerm = pattern;
@@ -388,9 +394,15 @@ if (typeof console === 'undefined') {
     }
     async fetchAllItemIDs(libraryID, progressCallback) {
       progressCallback({ phase: "filter", count: "fetching all items..." });
-      const search = new Zotero.Search();
-      search.libraryID = libraryID;
-      const itemIDs = await search.search();
+      let itemIDs = [];
+      if (Zotero.Items && typeof Zotero.Items.getAll === "function") {
+        const items = await Zotero.Items.getAll(libraryID);
+        itemIDs = [...new Set(items.map((item) => typeof item === "number" ? item : item?.id).filter((id) => typeof id === "number"))];
+      } else {
+        const search = new Zotero.Search();
+        search.libraryID = libraryID;
+        itemIDs = await search.search();
+      }
       progressCallback({ phase: "filter", count: itemIDs.length });
       return itemIDs;
     }
