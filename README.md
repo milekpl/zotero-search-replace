@@ -9,7 +9,7 @@ Advanced Zotero add‑on to search and batch‑replace bibliographic metadata wi
 - **Search**: Search across multiple fields (title, creators, abstract, tags, DOI, etc.)
 - **Pattern Types**: Regular expressions, exact match, or SQL LIKE patterns
 - **Replace**: Batch replace with capture group support ($1, $2, etc.)
-- **Preloaded Patterns**: 18 data quality patterns for common bibliographic errors
+- **Preloaded Patterns**: 23 data quality patterns for common bibliographic errors
 - **Preview**: Preview replacements before applying
 - **Collections**: Create collections from search results
 - **Collection Scope**: Automatically scopes searches to the currently selected collection in Zotero's main window (when a collection is selected)
@@ -43,13 +43,13 @@ To use: simply select a collection in Zotero's left sidebar before opening Searc
 
 ### Preloaded Patterns
 
-The plugin includes 18 preloaded data quality patterns for common bibliographic errors:
+The plugin includes 23 preloaded data quality patterns for common bibliographic errors:
 
-- **Author Names**: Fix comma spacing, lowercase "van/de/etc.", Jr./Sr. suffixes
-- **Dates**: Standardize date formats, fix month names
-- **Titles**: Capitalization fixes, remove extra spaces
-- **URLs/DOI**: Fix URL protocols, standardize DOI format, remove spurious Google Books URLs for printed books
-- **Publications**: Clean up conference names, journal abbreviations
+- **Author Names**: Fix comma spacing, lowercase "van/de/von" prefixes, Mc/Mac capitalization, Jr./Sr. suffixes, nicknames in parens
+- **Diacritics**: Restore Polish diacritics, German umlauts, and German eszett (ß) stripped by BibTeX
+- **Whitespace/Punctuation**: Fix spacing before colons/semicolons/parentheses across all fields
+- **URLs**: Normalize http→https, remove all URLs, or remove Google Books/WorldCat URLs from books
+- **Data Quality Checks**: Find empty creator fields, empty titles, corporate/group authors in person fields, and journal names appearing as authors
 
 ## Development
 

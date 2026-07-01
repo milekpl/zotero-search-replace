@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.6 - 2026-07-01
+
+### Fixed
+- Fixed automatic updates: the XPI's `manifest.json` had an `update_url` pointing at a nonexistent GitHub release asset (a scaffold default that was never overridden), so Zotero could never find new versions. It now correctly points to the maintained `update.json` on `main`. **Note:** existing installs need one manual reinstall to pick up this fix before auto-update starts working again.
+- Fixed the README's preloaded pattern count and category breakdown, which had drifted out of date (claimed 18, code has 23: added German eszett restoration, WorldCat URL removal, corporate-author detection, and journal-name-as-author detection to the documented list).
+
+### Added
+- Added CI (lint/unit tests/build) on every push and PR via GitHub Actions.
+- Added a tag-triggered release workflow that builds the extension, publishes the GitHub release and XPI, and syncs `update.json`/`update-beta.json` back to `main` automatically.
+- Added `eslint.config.js` (flat config) since `npm run lint` had no config file and was silently failing.
+
 ## 0.2.5 - 2026-06-15
 
 ### Fixed
