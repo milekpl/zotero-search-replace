@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  NODE_VERSION: "22"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, publish release and sync update manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          echo "version=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Sync package.json version to tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Sync manifest.json version to tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          jq --arg v "$VERSION" '.version = $v' manifest.json > manifest.json.tmp
+          mv manifest.json.tmp manifest.json
+
+      - run: npm run lint
+
+      - run: npm run test:unit
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Publish GitHub release and upload XPI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx zotero-plugin release
+
+      - name: Sync update manifests and version back to main
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cp build/update.json update.json
+          cp build/update-beta.json update-beta.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.json update-beta.json manifest.json package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No changes to sync."
+          else
+            git commit -m "chore(release): sync update manifest for v${VERSION} [skip ci]"
+            git push origin HEAD:main
+          fi

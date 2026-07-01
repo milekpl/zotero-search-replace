@@ -23,6 +23,7 @@ export default defineConfig({
   id: "zotero-search-replace@marcinmilkowski.pl",
   namespace: "ZoteroSearchReplace",
   binary: "/opt/zotero/zotero",
+  updateURL: "https://raw.githubusercontent.com/milekpl/zotero-search-replace/main/update.json",
 
   build: {
     assets: [
@@ -100,6 +101,14 @@ if (ZoteroSearchReplaceRef) {
 
   server: {
     asProxy: true,
+  },
+
+  release: {
+    github: {
+      // We publish update.json/update-beta.json to raw.githubusercontent.com
+      // instead of the scaffold's default "release" tag asset hosting.
+      updater: false,
+    },
   },
 
   test: {
