@@ -233,14 +233,16 @@ class SearchEngine {
       return pattern;
     }
 
-    let searchTerm = pattern;
-
     if (this.isEmptyFieldPattern(pattern, patternType)) {
       // This is an empty-field pattern - we can't search for this in Phase 1
       return null;
     }
 
+    let literals;
+
     if (patternType === PATTERN_TYPES.REGEX) {
+      let searchTerm = pattern;
+
       // Handle anchors - Zotero's search doesn't understand ^ or $ as regex anchors
       if (searchTerm.startsWith('^')) {
         searchTerm = searchTerm.slice(1);
@@ -256,10 +258,13 @@ class SearchEngine {
       searchTerm = searchTerm.replaceAll(/.\?/g, '');
       searchTerm = searchTerm.replaceAll(/\*\?/g, '');
       searchTerm = searchTerm.replaceAll(/\+\?/g, '');
-    }
 
-    // Extract literal alphanumeric sequences from the cleaned pattern
-    const literals = searchTerm.match(/[a-zA-Z0-9]{2,}/g) || [];
+      // Regex syntax is not a literal: `\bVon\b` must prefilter on "Von" (not
+      // "bVon") and `\b[Mm][Cc]` must not prefilter on "Mm" at all.
+      literals = this.extractRegexLiterals(searchTerm);
+    } else {
+      literals = pattern.match(/[a-zA-Z0-9]{2,}/g) || [];
+    }
 
     if (literals.length > 0) {
       // Return the longest literal - gives best filtering (longer = fewer false positives)
@@ -267,6 +272,54 @@ class SearchEngine {
     }
 
     return null;
+  }
+
+  // Pull literal alphanumeric runs out of a regex source string, skipping
+  // escapes (`\b`, `\s`, `\.`) and character classes (`[Mm]`, `[A-Za-z]`)
+  // so regex syntax is never mistaken for a literal prefilter term.
+  extractRegexLiterals(pattern) {
+    const literals = [];
+    let current = '';
+
+    const flush = () => {
+      if (current) {
+        literals.push(current);
+        current = '';
+      }
+    };
+
+    for (let i = 0; i < pattern.length; i++) {
+      const char = pattern[i];
+
+      if (char === '\\') {
+        // Skip the backslash and the escaped character.
+        flush();
+        i += 1;
+        continue;
+      }
+
+      if (char === '[') {
+        // Skip the entire character class, including a leading `]` or `\`.
+        flush();
+        i += 1;
+        while (i < pattern.length && pattern[i] !== ']') {
+          if (pattern[i] === '\\') {
+            i += 1;
+          }
+          i += 1;
+        }
+        continue;
+      }
+
+      if (/[A-Za-z0-9]/.test(char)) {
+        current += char;
+      } else {
+        flush();
+      }
+    }
+
+    flush();
+    return literals;
   }
 
   isEmptyFieldPattern(pattern, patternType) {

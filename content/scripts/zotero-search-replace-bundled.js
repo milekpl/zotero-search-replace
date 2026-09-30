@@ -200,11 +200,12 @@ if (typeof console === 'undefined') {
         }
         return pattern;
       }
-      let searchTerm = pattern;
       if (this.isEmptyFieldPattern(pattern, patternType)) {
         return null;
       }
+      let literals;
       if (patternType === PATTERN_TYPES.REGEX) {
+        let searchTerm = pattern;
         if (searchTerm.startsWith("^")) {
           searchTerm = searchTerm.slice(1);
         }
@@ -217,12 +218,53 @@ if (typeof console === 'undefined') {
         searchTerm = searchTerm.replaceAll(/.\?/g, "");
         searchTerm = searchTerm.replaceAll(/\*\?/g, "");
         searchTerm = searchTerm.replaceAll(/\+\?/g, "");
+        literals = this.extractRegexLiterals(searchTerm);
+      } else {
+        literals = pattern.match(/[a-zA-Z0-9]{2,}/g) || [];
       }
-      const literals = searchTerm.match(/[a-zA-Z0-9]{2,}/g) || [];
       if (literals.length > 0) {
         return literals.reduce((a, b) => a.length >= b.length ? a : b);
       }
       return null;
+    }
+    // Pull literal alphanumeric runs out of a regex source string, skipping
+    // escapes (`\b`, `\s`, `\.`) and character classes (`[Mm]`, `[A-Za-z]`)
+    // so regex syntax is never mistaken for a literal prefilter term.
+    extractRegexLiterals(pattern) {
+      const literals = [];
+      let current = "";
+      const flush = () => {
+        if (current) {
+          literals.push(current);
+          current = "";
+        }
+      };
+      for (let i = 0; i < pattern.length; i++) {
+        const char = pattern[i];
+        if (char === "\\") {
+          flush();
+          i += 1;
+          continue;
+        }
+        if (char === "[") {
+          flush();
+          i += 1;
+          while (i < pattern.length && pattern[i] !== "]") {
+            if (pattern[i] === "\\") {
+              i += 1;
+            }
+            i += 1;
+          }
+          continue;
+        }
+        if (/[A-Za-z0-9]/.test(char)) {
+          current += char;
+        } else {
+          flush();
+        }
+      }
+      flush();
+      return literals;
     }
     isEmptyFieldPattern(pattern, patternType) {
       return patternType === PATTERN_TYPES.REGEX && typeof pattern === "string" && /^\^(?:\\s\*)?\$$/.test(pattern);

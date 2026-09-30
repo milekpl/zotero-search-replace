@@ -49,3 +49,59 @@ jobs:
           name: zotero-search-replace-build
           path: build/
           retention-days: 7
+
+  zotero-integration:
+    name: Zotero Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget libgtk-3-0 libdbus-glib-1-2 xvfb
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Download Zotero
+        run: |
+          curl -fsSL "https://www.zotero.org/download/client/dl?platform=linux-x86_64" -o zotero.tar.xz
+          tar xJf zotero.tar.xz
+          mkdir -p $HOME/.zotero
+          mv Zotero_linux-x86_64 $HOME/.zotero/zotero
+          rm zotero.tar.xz
+          echo "ZOTERO_PLUGIN_ZOTERO_BIN_PATH=$HOME/.zotero/zotero/zotero" >> $GITHUB_ENV
+
+      - name: Run Zotero Integration Tests (headless)
+        env:
+          CI: "true"
+        run: xvfb-run -a npm run test:zotero
+
+      - name: Upload Zotero test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zotero-test-artifacts
+          path: |
+            tests/zotero-framework/profile/**
+            tests/zotero-framework/profile-*/**
+          retention-days: 7
+
+  report:
+    name: Test Report
+    runs-on: ubuntu-latest
+    needs: [lint-and-unit, build, zotero-integration]
+    if: always()
+    steps:
+      - run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Linting & Unit Tests: ${{ needs.lint-and-unit.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Zotero Integration: ${{ needs.zotero-integration.result }}" >> $GITHUB_STEP_SUMMARY

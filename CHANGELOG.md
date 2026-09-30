@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 - 2026-09-30
+
+### Added
+- Added Zotero 10 compatibility: `strict_max_version` is now `10.*` in `manifest.json` and the update manifests.
+
+### Changed
+- Raised the esbuild compile target to `firefox140` to match Zotero 10's Firefox baseline.
+
+### Fixed
+- Fixed the local development scaffold so `npm run dev` works: the Zotero binary is now resolved from a git-ignored `.env` (`ZOTERO_PLUGIN_ZOTERO_BIN_PATH`) instead of a hard-coded Linux path, and devDependencies (`zotero-plugin`, Jest, ESLint) install correctly.
+- Fixed `SearchEngine` Phase 1 prefilter so regex syntax is no longer mistaken for a literal: `\bVon\b` now prefilters on `Von` (was `bVon`) and `\b[Mm][Cc][A-Za-z]*` no longer prefilters on `Mm`, so the `lowercase-von`, `normalize-mc`, and `normalize-mac` patterns find their items.
+- Fixed collection scoping on Zotero 10, where the singular `ZoteroPane.getCollectionTreeRow()` throws once several folders are selected; the dialog now uses `getCollectionTreeRows()` when present.
+
 ## 0.2.6 - 2026-07-01
 
 ### Fixed

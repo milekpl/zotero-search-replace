@@ -210,7 +210,23 @@ function getSelectedCollection() {
       return null;
     }
 
-    var row = ZoteroPane.getCollectionTreeRow ? ZoteroPane.getCollectionTreeRow() : null;
+    // Zotero 10 removed the singular getter (it throws when several folders are
+    // selected). Prefer the plural one when present and only scope the search
+    // when exactly one collection is selected.
+    var rows;
+    if (typeof ZoteroPane.getCollectionTreeRows === 'function') {
+      rows = ZoteroPane.getCollectionTreeRows() || [];
+    } else if (typeof ZoteroPane.getCollectionTreeRow === 'function') {
+      rows = [ZoteroPane.getCollectionTreeRow()];
+    } else {
+      return null;
+    }
+
+    if (!rows || rows.length !== 1) {
+      return null;
+    }
+
+    var row = rows[0];
     if (!row || !row.ref || !row.ref.id) {
       return null;
     }

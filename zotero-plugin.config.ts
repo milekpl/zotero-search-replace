@@ -22,7 +22,6 @@ export default defineConfig({
   name: pkg.description,
   id: "zotero-search-replace@marcinmilkowski.pl",
   namespace: "ZoteroSearchReplace",
-  binary: "/opt/zotero/zotero",
   updateURL: "https://raw.githubusercontent.com/milekpl/zotero-search-replace/main/update.json",
 
   build: {
@@ -49,7 +48,7 @@ export default defineConfig({
           __env__: `"${process.env.NODE_ENV || 'development'}"`,
         },
         bundle: true,
-        target: "firefox115",
+        target: "firefox140",
         outfile: "addon/content/scripts/zotero-search-replace-bundled.js",
         banner: {
           js: `// Console polyfill for Zotero 8
@@ -118,5 +117,6 @@ if (ZoteroSearchReplaceRef) {
       timeout: 60000,
     },
     watch: false,
+    headless: !!process.env.CI,
   },
 });
