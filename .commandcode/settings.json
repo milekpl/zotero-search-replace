@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npx zotero-plugin test)",
+      "Shell(git:*)",
+      "Shell(git commit -F - <<'EOF' feat: add Zotero 10 support; fix search prefilter and dev scaffold - Bump strict_max_version to 10.* and raise esbuild target to firefox140 - Resolve the Zotero binary from a git-ignored .env (ZOTERO_PLUGIN_ZOTERO_BIN_PATH) instead of a hard-coded Linux path, so `npm run dev` works locally - Fix SearchEngine Phase 1 prefilter treating regex syntax as literals (\\bVon\\b -> \"bVon\", \\b[Mm][Cc]* -> \"Mm\"), which made the lowercase-von, normalize-mc and normalize-mac patterns miss their items - Use ZoteroPane.getCollectionTreeRows() on Zotero 10, where the singular getCollectionTreeRow() throws with multiple folders selected - Run Zotero integration tests in CI; release keeps syncing update.json to main Co-authored-by: CommandCodeBot <noreply@commandcode.ai> EOF)",
+      "Shell(for:*)",
+      "Shell(do:*)",
+      "Shell(node -e let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log(j.name,'|',j.head_branch,'| status='+j.status,'| conclusion='+j.conclusion,'|',j.html_url)}catch(e){console.log('err',e.message)}}))",
+      "Shell(done:*)",
+      "Shell(curl -s https://api.github.com/repos/milekpl/zotero-search-replace/releases/latest)",
+      "Shell(node -e let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const j=JSON.parse(d);console.log('tag='+j.tag_name,'| name='+j.name,'| assets='+(j.assets||[]).map(a=>a.name).join(','),'|',j.html_url)}catch(e){console.log('err',e.message)}}))",
+      "Shell(echo:*)",
+      "Shell(curl -s https://raw.githubusercontent.com/milekpl/zotero-search-replace/main/update.json)",
+      "Shell(curl -s https://api.github.com/repos/milekpl/zotero-search-replace/actions/runs/36715939202/jobs)",
+      "Shell(node -e let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const j=JSON.parse(d);for(const job of j.jobs){console.log(job.name,'| status='+job.status,'| conclusion='+job.conclusion)}}))"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
